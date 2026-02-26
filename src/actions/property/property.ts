@@ -7,7 +7,9 @@ import {
   makeOfferSchema,
   type Property,
   type Offer,
+  type PropertyImage,
 } from "@/lib/schema/property.schema";
+import { uploadFile, deleteFile, getPublicUrl } from "@/lib/supabase/storage";
 import type { generatePropertyValuation } from "@/trigger/property-valuation";
 import type { enrichPropertyContext } from "@/trigger/property-context";
 import type { generateInvestmentInsights } from "@/trigger/investment-insights";
@@ -300,6 +302,163 @@ export async function requestValuation(
 
 // ---------------------------------------------------------------------------
 // 8. SEARCH PROPERTIES
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 9. UPLOAD PROPERTY IMAGES
+// ---------------------------------------------------------------------------
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_IMAGES_PER_PROPERTY = 10;
+
+export async function uploadPropertyImages(
+  propertyId: string,
+  formData: FormData
+): Promise<{ data: PropertyImage[] } | { error: string }> {
+  const { supabase, userId } = await getAuthenticatedUser();
+  if (!supabase || !userId) return { error: "UNAUTHORIZED" };
+
+  // Verify user owns this property
+  const { data: prop } = await supabase
+    .from("properties")
+    .select("owner_id")
+    .eq("id", propertyId)
+    .single();
+  if (!prop || prop.owner_id !== userId) return { error: "You don't own this property." };
+
+  // Check existing image count
+  const { count } = await supabase
+    .from("property_images")
+    .select("id", { count: "exact", head: true })
+    .eq("property_id", propertyId);
+
+  const files = formData.getAll("images") as File[];
+  if (!files.length) return { error: "No files provided." };
+
+  const existingCount = count ?? 0;
+  if (existingCount + files.length > MAX_IMAGES_PER_PROPERTY) {
+    return { error: `Max ${MAX_IMAGES_PER_PROPERTY} images allowed. You have ${existingCount}.` };
+  }
+
+  // Validate all files first
+  for (const file of files) {
+    if (!(file instanceof File) || file.size === 0) continue;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return { error: `Invalid file type: ${file.name}. Only JPEG, PNG, WebP, GIF allowed.` };
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return { error: `${file.name} is too large. Max 10 MB.` };
+    }
+  }
+
+  const uploaded: PropertyImage[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!(file instanceof File) || file.size === 0) continue;
+
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const storagePath = `${propertyId}/${Date.now()}_${i}.${ext}`;
+
+    try {
+      const { publicUrl } = await uploadFile(supabase, file, {
+        bucket: "property-images",
+        path: storagePath,
+        upsert: true,
+      });
+
+      const { data: row, error: dbErr } = await supabase
+        .from("property_images")
+        .insert({
+          property_id: propertyId,
+          image_url: publicUrl,
+          storage_path: storagePath,
+          display_order: existingCount + i,
+          is_cover: existingCount === 0 && i === 0, // first image = cover
+        })
+        .select("*")
+        .single();
+
+      if (dbErr || !row) {
+        console.error("Failed to save image record:", dbErr);
+        continue;
+      }
+
+      uploaded.push(row as PropertyImage);
+    } catch (err) {
+      console.error(`Failed to upload ${file.name}:`, err);
+    }
+  }
+
+  if (uploaded.length === 0) return { error: "Failed to upload any images." };
+  return { data: uploaded };
+}
+
+// ---------------------------------------------------------------------------
+// 10. DELETE PROPERTY IMAGE
+// ---------------------------------------------------------------------------
+
+export async function deletePropertyImage(
+  imageId: string
+): Promise<{ success: true } | { error: string }> {
+  const { supabase, userId } = await getAuthenticatedUser();
+  if (!supabase || !userId) return { error: "UNAUTHORIZED" };
+
+  // Fetch the image row + verify ownership via property
+  const { data: image } = await supabase
+    .from("property_images")
+    .select("id, property_id, storage_path")
+    .eq("id", imageId)
+    .single();
+  if (!image) return { error: "Image not found." };
+
+  const { data: prop } = await supabase
+    .from("properties")
+    .select("owner_id")
+    .eq("id", image.property_id)
+    .single();
+  if (!prop || prop.owner_id !== userId) return { error: "Not authorized." };
+
+  // Delete from storage
+  try {
+    await deleteFile(supabase, "property-images", image.storage_path);
+  } catch {
+    // Non-fatal — file may already be gone
+  }
+
+  // Delete from DB
+  const { error: dbErr } = await supabase
+    .from("property_images")
+    .delete()
+    .eq("id", imageId);
+  if (dbErr) return { error: dbErr.message };
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// 11. GET PROPERTY IMAGES
+// ---------------------------------------------------------------------------
+
+export async function getPropertyImages(
+  propertyId: string
+): Promise<{ data: PropertyImage[] } | { error: string }> {
+  const { supabase } = await getAuthenticatedUser();
+  if (!supabase) return { error: "UNAUTHORIZED" };
+
+  const { data, error } = await supabase
+    .from("property_images")
+    .select("*")
+    .eq("property_id", propertyId)
+    .order("display_order", { ascending: true });
+
+  if (error) return { error: error.message };
+  return { data: (data ?? []) as PropertyImage[] };
+}
+
+// ---------------------------------------------------------------------------
+// 12. SEARCH PROPERTIES
 // ---------------------------------------------------------------------------
 
 export async function searchProperties(

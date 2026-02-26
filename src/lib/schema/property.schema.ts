@@ -91,3 +91,15 @@ export const OfferSchema = z.object({
   updated_at: z.string().nullable(),
 });
 export type Offer = z.infer<typeof OfferSchema>;
+
+// --- Property Image row shape from DB ---
+export const PropertyImageSchema = z.object({
+  id: z.string().uuid(),
+  property_id: z.string().uuid(),
+  image_url: z.string(),
+  storage_path: z.string(),
+  display_order: z.number(),
+  is_cover: z.boolean(),
+  created_at: z.string(),
+});
+export type PropertyImage = z.infer<typeof PropertyImageSchema>;
