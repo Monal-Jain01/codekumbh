@@ -49,6 +49,7 @@ export async function sendAgentMessage(
     .single();
 
   if (dbError || !taskRow) {
+    console.error("DB Error creating agent task:", dbError);
     return { error: "Failed to create agent task." };
   }
 
