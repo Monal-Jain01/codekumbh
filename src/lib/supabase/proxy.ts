@@ -36,28 +36,32 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
 
   const user = data?.claims
+  const pathname = request.nextUrl.pathname
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // ── Routes that are always public (no login required) ─────────────────
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/properties') || // browsing listings is public
+    pathname.startsWith('/search') ||
+    pathname.startsWith('/api')
+
+  // ── Unauthenticated: redirect to login for protected routes ───────────
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
-  // ── Onboarding check ──────────────────────────────────────────────────
-  const pathname = request.nextUrl.pathname
+  // ── Onboarding gate: runs for ALL authenticated requests ──────────────
+  // except the auth flow and the onboarding page itself
   const skipOnboardingCheck =
+    !user ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/login') ||
-    pathname === '/'
+    pathname.startsWith('/api')
 
-  if (user && !skipOnboardingCheck) {
+  if (!skipOnboardingCheck) {
     const userId = (user as Record<string, unknown>).sub as string | undefined
     if (userId) {
       const { data: profile } = await supabase

@@ -5,19 +5,19 @@ import {
   TrendingUp,
   BarChart3,
   Building2,
-  Sparkles,
-  RefreshCw,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   ArrowRight,
-  IndianRupee,
+  RefreshCw,
+  Sparkles,
   Target,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { regeneratePortfolio } from "@/actions/portfolio/portfolio";
+import { PortfolioRealtimeListener } from "@/components/portfolio/realtime-listener";
+import { PortfolioGeneratingBanner } from "@/components/portfolio/generating-banner";
 
 /* ─────────────────────────────────────────────────── types ── */
 
@@ -138,6 +138,13 @@ export default async function PortfolioPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Realtime subscription — invisible, triggers router.refresh() when status → ready/failed */}
+      <PortfolioRealtimeListener
+        portfolioId={portfolio?.id ?? null}
+        userId={user.id}
+        initialStatus={portfolio?.status ?? "pending"}
+      />
+
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
 
         {/* ── Header ── */}
@@ -166,27 +173,7 @@ export default async function PortfolioPage() {
 
         {/* ── Status: pending / generating / failed ── */}
         {(hasPending || isGenerating) && (
-          <Card className="border-indigo-200 bg-indigo-50">
-            <CardContent className="flex items-center gap-3 py-6">
-              {isGenerating ? (
-                <RefreshCw className="w-5 h-5 text-indigo-600 animate-spin shrink-0" />
-              ) : (
-                <Sparkles className="w-5 h-5 text-indigo-600 shrink-0" />
-              )}
-              <div>
-                <p className="font-medium text-indigo-800">
-                  {isGenerating
-                    ? "Your AI portfolio is being generated…"
-                    : "No portfolio yet"}
-                </p>
-                <p className="text-sm text-indigo-600 mt-0.5">
-                  {isGenerating
-                    ? "This usually takes 30–60 seconds. Refresh the page shortly."
-                    : "List a property or click Regenerate to create your AI portfolio analysis."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <PortfolioGeneratingBanner isGenerating={isGenerating} />
         )}
 
         {isFailed && (

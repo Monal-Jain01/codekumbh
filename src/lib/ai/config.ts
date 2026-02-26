@@ -9,7 +9,7 @@ export const aiModels = {
 	/** Gemini — used for background tasks (valuation, context, insights) */
 	primary: google('gemini-2.5-flash'),
 	/** Groq — used for interactive chat agents (fast, generous free tier) */
-	chat: groq('llama-3.3-70b-versatile'),
+	chat: groq('openai/gpt-oss-120b'),
 };
 
 export const systemPrompts = {
