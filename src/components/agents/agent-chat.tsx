@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, Wrench, Sparkles, RotateCcw } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Wrench,
+  Sparkles,
+  RotateCcw,
+  Zap,
+  Database,
+} from "lucide-react";
 import { sendAgentMessage } from "@/actions/agents/chat";
 import { toast } from "sonner";
+import { useRealtimeSubscription } from "@/lib/supabase/realtime";
 
 interface Message {
   id: string;
@@ -11,33 +22,66 @@ interface Message {
   content: string;
   toolsUsed?: string[];
   timestamp: Date;
+  status?: "pending" | "processing" | "completed" | "failed";
+  /** DB task ID — used for realtime subscription */
+  taskId?: string;
 }
 
 // Tool descriptions for each agent type
 const AGENT_TOOL_INFO: Record<string, { name: string; tools: string[] }> = {
   "property-valuation": {
     name: "Valuation",
-    tools: ["DB Property Search", "Market Stats", "Investment Metrics", "Previous Valuations"],
+    tools: [
+      "DB Property Search",
+      "Market Stats",
+      "Investment Metrics",
+      "Previous Valuations",
+    ],
   },
   "investment-advisory": {
     name: "Advisory",
-    tools: ["DB Property Search", "Market Stats", "Investment Metrics", "Previous Valuations"],
+    tools: [
+      "DB Property Search",
+      "Market Stats",
+      "Investment Metrics",
+      "Previous Valuations",
+    ],
   },
   "market-intelligence": {
     name: "Intelligence",
-    tools: ["DB Property Search", "Market Stats", "Investment Metrics", "Previous Valuations"],
+    tools: [
+      "DB Property Search",
+      "Market Stats",
+      "Investment Metrics",
+      "Previous Valuations",
+    ],
   },
   "offer-risk": {
     name: "Risk Assessment",
-    tools: ["Offer Analysis", "Anomaly Detection", "Market Stats", "Property Search"],
+    tools: [
+      "Offer Analysis",
+      "Anomaly Detection",
+      "Market Stats",
+      "Property Search",
+    ],
   },
   "portfolio-optimization": {
     name: "Portfolio",
-    tools: ["Portfolio Summary", "Property Search", "Market Stats", "Investment Metrics"],
+    tools: [
+      "Portfolio Summary",
+      "Property Search",
+      "Market Stats",
+      "Investment Metrics",
+    ],
   },
   "fraud-anomaly": {
     name: "Fraud Detection",
-    tools: ["Anomaly Detection", "Property Search", "Market Stats", "Offer Analysis"],
+    tools: [
+      "Anomaly Detection",
+      "Property Search",
+      "Market Stats",
+      "Offer Analysis",
+    ],
   },
 };
 
@@ -51,24 +95,87 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toolInfo = AGENT_TOOL_INFO[agentId];
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
 
-  // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // ── Realtime: listen for agent_tasks updates ──────────────────────
+  const handleRealtimeUpdate = useCallback(
+    (payload: { new: Record<string, unknown> }) => {
+      const row = payload.new;
+      const taskId = row.id as string;
+      const status = row.status as string;
+
+      if (status === "processing") {
+        // Update the pending message to show "processing"
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.taskId === taskId ? { ...m, status: "processing" } : m
+          )
+        );
+        return;
+      }
+
+      if (status === "completed" || status === "failed") {
+        const response =
+          (row.response as string) ??
+          "Agent could not generate a response.";
+        const toolsUsed = (row.tools_used as string[]) ?? [];
+
+        // Replace the pending placeholder with the actual response
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.taskId === taskId
+              ? {
+                  ...m,
+                  content: response,
+                  toolsUsed,
+                  status: status as "completed" | "failed",
+                  timestamp: new Date(),
+                }
+              : m
+          )
+        );
+
+        setLoading(false);
+        setActiveTaskId(null);
+
+        if (status === "failed") {
+          toast.error("Agent encountered an error. Try again.");
+        }
+      }
+    },
+    []
+  );
+
+  useRealtimeSubscription({
+    table: "agent_tasks",
+    event: "UPDATE",
+    filterColumn: "id",
+    filterValue: activeTaskId ?? undefined,
+    onEvent: handleRealtimeUpdate as (payload: unknown) => void,
+    enabled: !!activeTaskId,
+  });
+
+  // ── Send message ──────────────────────────────────────────────────
   const handleSend = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
+    // Add user message locally
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -80,8 +187,11 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
     setLoading(true);
 
     try {
-      // Build conversation history for context
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+      // Build conversation history
+      const history = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const result = await sendAgentMessage(agentId, text, history);
 
@@ -91,31 +201,32 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
         return;
       }
 
-      const botMsg: Message = {
+      // Add a pending bot placeholder — will be replaced by realtime
+      const pendingMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: result.response,
-        toolsUsed: result.toolsUsed,
+        content: "",
+        status: "pending",
+        taskId: result.taskId,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botMsg]);
+      setMessages((prev) => [...prev, pendingMsg]);
+      setActiveTaskId(result.taskId);
     } catch {
-      toast.error("Failed to get response. Please try again.");
-    } finally {
+      toast.error("Failed to send message.");
       setLoading(false);
     }
   };
 
   const handleClearChat = () => {
     setMessages([]);
+    setActiveTaskId(null);
+    setLoading(false);
     toast.success("Chat cleared");
   };
 
-  // Format tool name for display
   const formatToolName = (name: string) =>
-    name
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   return (
     <>
@@ -128,11 +239,32 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
                 <Bot size={32} className="text-primary" />
               </div>
               <div className="text-center space-y-1.5">
-                <h3 className="text-base font-semibold text-foreground">{agentName}</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  {agentName}
+                </h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  This agent uses real-time database tools to provide data-driven answers.
-                  Ask anything about real estate.
+                  This agent runs as a <strong>background task</strong> using
+                  real-time database tools. Responses arrive via live updates.
                 </p>
+              </div>
+
+              {/* How it works */}
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-muted/40 border border-border/50 rounded-lg px-4 py-2.5">
+                <span className="flex items-center gap-1">
+                  <Send size={10} /> Send
+                </span>
+                <span>→</span>
+                <span className="flex items-center gap-1">
+                  <Zap size={10} /> Trigger.dev
+                </span>
+                <span>→</span>
+                <span className="flex items-center gap-1">
+                  <Database size={10} /> DB Tools
+                </span>
+                <span>→</span>
+                <span className="flex items-center gap-1">
+                  <Sparkles size={10} /> Realtime
+                </span>
               </div>
 
               {/* Tool badges */}
@@ -161,7 +293,10 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
                     }}
                     className="text-left text-xs text-muted-foreground bg-muted/40 hover:bg-muted/70 border border-border/50 rounded-lg px-3 py-2.5 transition-colors"
                   >
-                    <Sparkles size={10} className="inline mr-1.5 text-primary" />
+                    <Sparkles
+                      size={10}
+                      className="inline mr-1.5 text-primary"
+                    />
                     {prompt}
                   </button>
                 ))}
@@ -171,7 +306,11 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
 
           {messages.map((msg) => (
             <div key={msg.id} className="space-y-1">
-              <div className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`flex gap-3 ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 {msg.role === "assistant" && (
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Bot size={14} className="text-primary" />
@@ -184,7 +323,30 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
                       : "bg-muted text-foreground rounded-bl-md"
                   }`}
                 >
-                  {msg.content}
+                  {/* Pending / Processing state */}
+                  {msg.role === "assistant" &&
+                  (msg.status === "pending" || msg.status === "processing") ? (
+                    <div className="flex items-center gap-3 py-1">
+                      <Loader2
+                        size={16}
+                        className="animate-spin text-primary"
+                      />
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground">
+                          {msg.status === "pending"
+                            ? "Queued — waiting for background worker..."
+                            : "Processing — querying database tools..."}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {msg.status === "pending"
+                            ? "Task submitted to Trigger.dev"
+                            : "AI agent is analysing real data from your database"}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -195,7 +357,7 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
               {/* Tool usage indicator */}
               {msg.toolsUsed && msg.toolsUsed.length > 0 && (
                 <div className="flex gap-3 justify-start">
-                  <div className="w-7" /> {/* spacer */}
+                  <div className="w-7" />
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Wrench size={10} className="text-muted-foreground" />
                     {msg.toolsUsed.map((t, i) => (
@@ -206,23 +368,23 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
                         {formatToolName(t)}
                       </span>
                     ))}
+                    <span className="text-[10px] text-green-600 font-medium ml-1">
+                      ✓ Live data
+                    </span>
                   </div>
+                </div>
+              )}
+              {/* Failed state indicator */}
+              {msg.status === "failed" && (
+                <div className="flex gap-3 justify-start">
+                  <div className="w-7" />
+                  <span className="text-[10px] text-red-500 font-medium">
+                    ✕ Task failed
+                  </span>
                 </div>
               )}
             </div>
           ))}
-
-          {loading && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot size={14} className="text-primary" />
-              </div>
-              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Querying tools & analyzing...</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -243,7 +405,9 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            onKeyDown={(e) =>
+              e.key === "Enter" && !e.shiftKey && handleSend()
+            }
             placeholder={placeholder}
             className="flex-1 bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-shadow"
           />
@@ -255,12 +419,22 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
             <Send size={16} />
           </button>
         </div>
+
+        {/* Status bar when processing */}
+        {loading && activeTaskId && (
+          <div className="max-w-3xl mx-auto mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span>
+              Background task running · Listening for realtime updates
+            </span>
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-// Suggested prompts per agent
+// ── Suggested prompts per agent ─────────────────────────────────────
 function getSuggestedPrompts(agentId: string): string[] {
   const prompts: Record<string, string[]> = {
     "property-valuation": [
