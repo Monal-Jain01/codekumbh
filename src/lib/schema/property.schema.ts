@@ -21,6 +21,8 @@ export const createPropertySchema = z.object({
   asking_price: z
     .number({ message: "Price must be a number" })
     .positive("Price must be positive"),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
 });
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 

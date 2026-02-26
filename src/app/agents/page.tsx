@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Zap,
   ArrowRight,
+  MapPin,
 } from "lucide-react";
 
 const agents = [
@@ -78,6 +79,17 @@ const agents = [
     accent: "destructive",
     bgClass: "bg-destructive/10",
     iconClass: "text-destructive",
+  },
+  {
+    id: "neighbourhood-analysis",
+    name: "Neighbourhood Analysis Agent",
+    description:
+      "Comprehensive locality insights: nearby properties, amenities, connectivity, price trends, news, and livability scores for any area.",
+    icon: MapPin,
+    status: "ready" as const,
+    accent: "chart-3",
+    bgClass: "bg-chart-3/10",
+    iconClass: "text-chart-3",
   },
 ];
 

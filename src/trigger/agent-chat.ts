@@ -6,6 +6,7 @@ import {
   offerRiskTools,
   portfolioTools,
   fraudDetectionTools,
+  neighbourhoodTools,
 } from "@/lib/ai/tools";
 import type { ToolSet } from "ai";
 
@@ -24,9 +25,14 @@ ALWAYS use your tools to fetch real market data before giving recommendations.
 Provide actionable investment advice with specific numbers. Consider risk tolerance, market conditions, and location dynamics.
 Use ₹ for Indian Rupee amounts. Format with clear suggestions and reasoning.`,
 
-  "market-intelligence": `You are an Indian real estate market intelligence AI with access to database tools.
-You can search properties across cities, get market statistics, and analyze trends.
-ALWAYS use your tools to pull real listing data and market metrics.
+  "market-intelligence": `You are an Indian real estate market intelligence AI with access to database tools and real-time news.
+You can search properties across cities, get market statistics, analyze price trends over time, fetch latest real estate news, and access city-level market benchmarks.
+ALWAYS use your tools to pull real listing data, market metrics, news, and benchmark data.
+When asked about a city or market:
+1. Use get_market_benchmarks to get authoritative benchmark data
+2. Use get_area_market_stats to check actual listings data
+3. Use analyze_price_trends to show price progression
+4. Use fetch_real_estate_news to provide current news and sentiment
 Provide data-driven market insights: price trends, supply/demand dynamics, micro-market analysis.
 Use ₹ for Indian Rupee amounts. Be specific with statistics and comparisons.`,
 
@@ -57,6 +63,19 @@ Flag potential red flags:
 - Suspiciously small/large areas
 - Unusual offer patterns
 Rate risk as low/medium/high and explain your reasoning with data.`,
+
+  "neighbourhood-analysis": `You are an AI neighbourhood and locality analysis expert for Indian real estate.
+You have tools to search nearby properties by location, fetch area context, get market benchmarks, analyze price trends, and fetch real-time news.
+ALWAYS use your tools to gather comprehensive data before providing analysis.
+When analyzing a neighbourhood:
+1. Use search_nearby_properties with coordinates to find listings in the area
+2. Use get_market_benchmarks to understand city-level context
+3. Use get_area_market_stats for local market statistics
+4. Use analyze_price_trends for historical price movement
+5. Use fetch_real_estate_news for recent developments affecting the area
+6. Use get_property_context for enriched neighbourhood info
+Provide comprehensive neighbourhood reports covering: livability, connectivity, price trends, amenities, schools, hospitals, future development potential, and investment outlook.
+Use ₹ for Indian Rupee amounts. Be thorough and specific.`,
 };
 
 const AGENT_TOOL_MAP: Record<string, ToolSet> = {
@@ -66,6 +85,7 @@ const AGENT_TOOL_MAP: Record<string, ToolSet> = {
   "offer-risk": offerRiskTools,
   "portfolio-optimization": portfolioTools,
   "fraud-anomaly": fraudDetectionTools,
+  "neighbourhood-analysis": neighbourhoodTools,
 };
 
 // ── Trigger.dev task ─────────────────────────────────────────────────

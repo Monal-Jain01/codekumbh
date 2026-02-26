@@ -14,6 +14,7 @@ import {
   FileText,
   Loader2,
   ArrowLeft,
+  Navigation2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,9 @@ export function CreatePropertyForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [propertyType, setPropertyType] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [locating, setLocating] = useState(false);
 
   // Plot & commercial don't have bedrooms/bathrooms/year_built
   const showBuildingSpecs = propertyType !== "plot" && propertyType !== "commercial";
@@ -50,6 +54,8 @@ export function CreatePropertyForm() {
 
     const fd = new FormData(e.currentTarget);
     fd.set("property_type", propertyType);
+    if (lat) fd.set("latitude", lat);
+    if (lng) fd.set("longitude", lng);
 
     const result = await createProperty(fd);
     setLoading(false);
@@ -163,6 +169,63 @@ export function CreatePropertyForm() {
                 State <span className="text-destructive">*</span>
               </Label>
               <Input id="state" name="state" placeholder="e.g. Karnataka" required />
+            </div>
+
+            {/* Lat/Lng */}
+            <div className="sm:col-span-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">GPS Coordinates (optional)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={locating}
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      toast.error("Geolocation not supported by your browser.");
+                      return;
+                    }
+                    setLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setLat(pos.coords.latitude.toFixed(6));
+                        setLng(pos.coords.longitude.toFixed(6));
+                        setLocating(false);
+                        toast.success("Location captured!");
+                      },
+                      (err) => {
+                        setLocating(false);
+                        toast.error(err.message || "Failed to get location.");
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }}
+                >
+                  {locating ? (
+                    <Loader2 size={12} className="animate-spin mr-1" />
+                  ) : (
+                    <Navigation2 size={12} className="mr-1" />
+                  )}
+                  Use My Location
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Latitude"
+                  type="number"
+                  step="any"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                />
+                <Input
+                  placeholder="Longitude"
+                  type="number"
+                  step="any"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardContent>

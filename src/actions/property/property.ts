@@ -52,6 +52,8 @@ export async function createProperty(
     year_built: formData.get("year_built") ? Number(formData.get("year_built")) : undefined,
     lot_size: formData.get("lot_size") ? Number(formData.get("lot_size")) : undefined,
     asking_price: Number(formData.get("asking_price")),
+    latitude: formData.get("latitude") ? Number(formData.get("latitude")) : undefined,
+    longitude: formData.get("longitude") ? Number(formData.get("longitude")) : undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -73,6 +75,8 @@ export async function createProperty(
       year_built: parsed.data.year_built ?? null,
       lot_size: parsed.data.lot_size ?? null,
       asking_price: parsed.data.asking_price,
+      latitude: parsed.data.latitude ?? null,
+      longitude: parsed.data.longitude ?? null,
       is_active: true,
     })
     .select("*")
@@ -95,43 +99,42 @@ export async function createProperty(
     description: parsed.data.description || null,
   };
 
-  try {
-    // 1. AI Property Valuation
-    await tasks.trigger<typeof generatePropertyValuation>(
-      "generate-property-valuation",
-      {
-        propertyId: data.id,
-        userId,
-        propertyData: {
-          ...propertyPayload,
-          year_built: parsed.data.year_built ?? null,
-          lot_size: parsed.data.lot_size ?? null,
-        },
-      }
-    );
-
-    // 2. Property Context Enrichment
-    await tasks.trigger<typeof enrichPropertyContext>(
-      "enrich-property-context",
-      {
-        propertyId: data.id,
-        propertyData: propertyPayload,
-      }
-    );
-
-    // 3. Investment Insights
-    await tasks.trigger<typeof generateInvestmentInsights>(
-      "generate-investment-insights",
-      {
-        propertyId: data.id,
-        userId,
-        propertyData: propertyPayload,
-      }
-    );
-  } catch (triggerErr) {
-    // Don't fail the property creation if triggers fail
-    console.error("Failed to trigger background AI tasks:", triggerErr);
-  }
+  // ── Fire-and-forget: trigger 3 AI background tasks (don't block response) ──
+  void (async () => {
+    try {
+      await Promise.all([
+        tasks.trigger<typeof generatePropertyValuation>(
+          "generate-property-valuation",
+          {
+            propertyId: data.id,
+            userId,
+            propertyData: {
+              ...propertyPayload,
+              year_built: parsed.data.year_built ?? null,
+              lot_size: parsed.data.lot_size ?? null,
+            },
+          }
+        ),
+        tasks.trigger<typeof enrichPropertyContext>(
+          "enrich-property-context",
+          {
+            propertyId: data.id,
+            propertyData: propertyPayload,
+          }
+        ),
+        tasks.trigger<typeof generateInvestmentInsights>(
+          "generate-investment-insights",
+          {
+            propertyId: data.id,
+            userId,
+            propertyData: propertyPayload,
+          }
+        ),
+      ]);
+    } catch (triggerErr) {
+      console.error("Failed to trigger background AI tasks:", triggerErr);
+    }
+  })();
 
   return { data: data as Property };
 }
@@ -246,6 +249,54 @@ export async function getPropertyOffers(
 
   if (error) return { error: error.message };
   return { data: (data ?? []) as Offer[] };
+}
+
+// ---------------------------------------------------------------------------
+// 6b. RESPOND TO OFFER (accept / reject)
+// ---------------------------------------------------------------------------
+
+export async function respondToOffer(
+  offerId: string,
+  action: "accepted" | "rejected"
+): Promise<{ success: true } | { error: string }> {
+  const { supabase, userId } = await getAuthenticatedUser();
+  if (!supabase || !userId) return { error: "UNAUTHORIZED" };
+
+  // Fetch the offer + verify the current user owns the property
+  const { data: offer } = await supabase
+    .from("offers")
+    .select("id, property_id, status")
+    .eq("id", offerId)
+    .single();
+  if (!offer) return { error: "Offer not found." };
+  if (offer.status !== "pending") return { error: "Offer already resolved." };
+
+  const { data: property } = await supabase
+    .from("properties")
+    .select("owner_id")
+    .eq("id", offer.property_id)
+    .single();
+  if (!property || property.owner_id !== userId)
+    return { error: "You don't own this property." };
+
+  // Update offer status
+  const { error: updateErr } = await supabase
+    .from("offers")
+    .update({ status: action, updated_at: new Date().toISOString() })
+    .eq("id", offerId);
+  if (updateErr) return { error: updateErr.message };
+
+  // If accepted, reject all other pending offers on this property
+  if (action === "accepted") {
+    await supabase
+      .from("offers")
+      .update({ status: "rejected", updated_at: new Date().toISOString() })
+      .eq("property_id", offer.property_id)
+      .eq("status", "pending")
+      .neq("id", offerId);
+  }
+
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------

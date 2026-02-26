@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardRealtimeListener } from "@/components/dashboard/realtime-listener";
+import {
+  PropertyTypeChart,
+  OfferStatusChart,
+  PortfolioValueChart,
+  OfferActivityChart,
+} from "@/components/dashboard/charts";
 import type { Property } from "@/lib/schema/property.schema";
 import type { Offer } from "@/lib/schema/property.schema";
 
@@ -111,6 +117,26 @@ export default async function DashboardPage() {
             value={sentOffers.length.toString()}
             sub={`${pendingSentOffers} pending`}
           />
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Property Type Distribution</h3>
+            <PropertyTypeChart properties={properties} />
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Offer Status Breakdown</h3>
+            <OfferStatusChart offers={[...receivedOffers, ...sentOffers]} />
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Portfolio Value by Property</h3>
+            <PortfolioValueChart properties={properties} />
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Offer Activity (Last 7 Days)</h3>
+            <OfferActivityChart offers={[...receivedOffers, ...sentOffers]} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

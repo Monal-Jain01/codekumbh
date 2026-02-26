@@ -56,6 +56,14 @@ const agentInfo: Record<
     placeholder:
       "Ask about listing integrity (e.g., Check if a 3BHK in Mumbai listed at 15L is legitimate)...",
   },
+  "neighbourhood-analysis": {
+    name: "Neighbourhood Analysis Agent",
+    description:
+      "Comprehensive locality insights: nearby properties, amenities, price trends, and livability analysis.",
+    emoji: "📍",
+    placeholder:
+      "Ask about a neighbourhood (e.g., What's the real estate market like around Whitefield, Bangalore? or Analyze the locality around lat 12.97, lng 77.75)...",
+  },
 };
 
 interface Props {

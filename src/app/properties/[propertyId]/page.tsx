@@ -12,12 +12,14 @@ import {
   Home,
   User,
   Clock,
+  Phone,
 } from "lucide-react";
 import { MakeOfferForm } from "@/components/property/make-offer-form";
 import { AIValuationCard } from "@/components/property/ai-valuation-card";
 import { PropertyContextCard } from "@/components/property/property-context-card";
 import { InvestmentInsightsCard } from "@/components/property/investment-insights-card";
 import { PropertyImageUpload } from "@/components/property/property-image-upload";
+import { OfferActions } from "@/components/property/offer-actions";
 import { RealtimeValuationListener, RealtimeOfferListener, RealtimeContextListener, RealtimeInsightsListener } from "@/components/property/realtime-listeners";
 import type { Property, PropertyImage } from "@/lib/schema/property.schema";
 import type { Offer, Valuation } from "@/lib/schema/property.schema";
@@ -47,26 +49,32 @@ export default async function PropertyDetailPage({ params }: Props) {
   const p = property as Property;
   const isOwner = user.id === p.owner_id;
 
-  // Fetch offers if owner
-  let offers: Offer[] = [];
+  // Fetch offers if owner (include buyer profiles)
+  let offers: (Offer & { buyer_name?: string; buyer_phone?: string })[] = [];
   if (isOwner) {
     const { data } = await supabase
       .from("offers")
-      .select("*")
+      .select("*, profiles:buyer_id(full_name, phone)")
       .eq("property_id", propertyId)
       .order("created_at", { ascending: false });
-    offers = (data ?? []) as Offer[];
+    offers = ((data ?? []) as Array<Offer & { profiles: { full_name: string | null; phone: string | null } | null }>).map((o) => ({
+      ...o,
+      buyer_name: o.profiles?.full_name ?? undefined,
+      buyer_phone: o.profiles?.phone ?? undefined,
+    }));
   }
 
-  // Fetch owner name
+  // Fetch owner profile (name + phone)
   let ownerName = "Unknown";
+  let ownerPhone: string | null = null;
   if (p.owner_id) {
     const { data: ownerProfile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, phone")
       .eq("id", p.owner_id)
       .single();
     ownerName = ownerProfile?.full_name ?? "Unknown";
+    ownerPhone = ownerProfile?.phone ?? null;
   }
 
   // Fetch latest AI valuation
@@ -215,9 +223,9 @@ export default async function PropertyDetailPage({ params }: Props) {
                     {offers.map((offer) => (
                       <div
                         key={offer.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border gap-3"
                       >
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground flex items-center gap-1">
                             <IndianRupee size={13} />
                             {Number(offer.offer_price).toLocaleString("en-IN")}
@@ -225,19 +233,17 @@ export default async function PropertyDetailPage({ params }: Props) {
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Clock size={11} />
                             {new Date(offer.created_at).toLocaleDateString("en-IN")}
+                            {offer.buyer_name && (
+                              <span className="ml-1">· {offer.buyer_name}</span>
+                            )}
                           </p>
                         </div>
-                        <span
-                          className={`text-xs font-medium px-2.5 py-0.5 rounded-full capitalize ${
-                            offer.status === "pending"
-                              ? "bg-amber-100 text-amber-700"
-                              : offer.status === "accepted"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {offer.status}
-                        </span>
+                        <OfferActions
+                          offerId={offer.id}
+                          status={offer.status}
+                          buyerName={offer.buyer_name}
+                          buyerPhone={offer.buyer_phone}
+                        />
                       </div>
                     ))}
                   </div>
@@ -290,6 +296,17 @@ export default async function PropertyDetailPage({ params }: Props) {
                   </p>
                 </div>
               </div>
+
+              {/* Owner phone (non-owner view) */}
+              {!isOwner && ownerPhone && (
+                <a
+                  href={`tel:${ownerPhone}`}
+                  className="flex items-center gap-2 text-sm text-primary hover:underline mb-4"
+                >
+                  <Phone size={14} />
+                  {ownerPhone}
+                </a>
+              )}
 
               {/* Make Offer (non-owner) */}
               {!isOwner && (
