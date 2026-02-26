@@ -35,11 +35,6 @@ export async function sendAgentMessage(
   if (message.length > 2000) return { error: "Message too long (max 2000 chars)." };
   if (!VALID_AGENTS.includes(agentId)) return { error: "Unknown agent." };
 
-  // Debug: verify service role key is present
-  console.log("[agent-chat] SUPABASE_URL present:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log("[agent-chat] SERVICE_ROLE_KEY present:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-  console.log("[agent-chat] SERVICE_ROLE_KEY starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 10));
-
   // 1. Create a pending task row in DB using service-role client
   const { data: taskRow, error: dbError } = await supabaseAdmin
     .from("agent_tasks")
