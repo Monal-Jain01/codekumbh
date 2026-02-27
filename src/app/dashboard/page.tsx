@@ -121,19 +121,19 @@ export default async function DashboardPage() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-card rounded-xl border border-border p-5">
+          <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
             <h3 className="text-sm font-semibold text-foreground mb-4">Property Type Distribution</h3>
             <PropertyTypeChart properties={properties} />
           </div>
-          <div className="bg-card rounded-xl border border-border p-5">
+          <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
             <h3 className="text-sm font-semibold text-foreground mb-4">Offer Status Breakdown</h3>
             <OfferStatusChart offers={[...receivedOffers, ...sentOffers]} />
           </div>
-          <div className="bg-card rounded-xl border border-border p-5">
+          <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
             <h3 className="text-sm font-semibold text-foreground mb-4">Portfolio Value by Property</h3>
             <PortfolioValueChart properties={properties} />
           </div>
-          <div className="bg-card rounded-xl border border-border p-5">
+          <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
             <h3 className="text-sm font-semibold text-foreground mb-4">Offer Activity (Last 7 Days)</h3>
             <OfferActivityChart offers={[...receivedOffers, ...sentOffers]} />
           </div>
@@ -150,7 +150,7 @@ export default async function DashboardPage() {
             </div>
 
             {properties.length === 0 ? (
-              <div className="bg-card rounded-xl border border-border p-8 text-center">
+              <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-8 text-center shadow-sm">
                 <Building2 size={32} className="text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground mb-3">
                   You haven&apos;t listed any properties yet
@@ -171,19 +171,19 @@ export default async function DashboardPage() {
                     <Link
                       key={p.id}
                       href={`/properties/${p.id}`}
-                      className="group flex items-center gap-4 bg-card rounded-xl border border-border p-4 hover:shadow-md hover:border-primary/20 transition-all"
+                      className="group flex items-center gap-4 bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30"
                     >
                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-accent flex items-center justify-center flex-shrink-0">
                         <span className="text-xl">
                           {p.property_type === "apartment"
                             ? "🏢"
                             : p.property_type === "villa"
-                            ? "🏡"
-                            : p.property_type === "plot"
-                            ? "🌳"
-                            : p.property_type === "commercial"
-                            ? "🏪"
-                            : "🏠"}
+                              ? "🏡"
+                              : p.property_type === "plot"
+                                ? "🌳"
+                                : p.property_type === "commercial"
+                                  ? "🏪"
+                                  : "🏠"}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -203,13 +203,12 @@ export default async function DashboardPage() {
                         </p>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
-                              p.status === "active"
-                                ? "bg-green-100 text-green-700"
-                                : p.status === "sold"
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${p.status === "active"
+                              ? "bg-green-100 text-green-700"
+                              : p.status === "sold"
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-muted text-muted-foreground"
-                            }`}
+                              }`}
                           >
                             {p.status}
                           </span>
@@ -230,7 +229,7 @@ export default async function DashboardPage() {
           {/* Sidebar: Recent offers + quick links */}
           <div className="space-y-4">
             {/* Recent Received Offers */}
-            <div className="bg-card rounded-xl border border-border p-4">
+            <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center justify-between">
                 Recent Offers Received
                 {receivedOffers.length > 0 && (
@@ -265,7 +264,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* My Sent Offers */}
-            <div className="bg-card rounded-xl border border-border p-4">
+            <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center justify-between">
                 My Offers Sent
                 {sentOffers.length > 0 && (
@@ -300,7 +299,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Quick Links */}
-            <div className="bg-card rounded-xl border border-border p-4 space-y-2">
+            <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-4 space-y-2 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
               <h3 className="text-sm font-semibold text-foreground mb-2">Quick Links</h3>
               <QuickLink href="/dashboard/portfolio" icon={<TrendingUp size={14} />} label="My AI Portfolio" />
               <QuickLink href="/agents" icon={<Bot size={14} />} label="AI Agents" />
@@ -329,9 +328,9 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-4">
+    <div className="bg-[#E3EDF6] dark:bg-slate-900 rounded-xl border border-border/50 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">{icon}</div>
+        <div className="w-8 h-8 rounded-lg bg-white/50 dark:bg-white/10 flex items-center justify-center">{icon}</div>
       </div>
       <p className="text-xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
