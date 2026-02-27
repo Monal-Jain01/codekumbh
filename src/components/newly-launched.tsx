@@ -4,84 +4,16 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 
 import { Tag, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 
-type BadgeType = "NEW LAUNCH" | "NEW ARRIVAL";
+import type { Property } from "@/lib/schema/property.schema";
 
-interface Project {
-    id: number;
-    badge: BadgeType;
-    image: string;
-    name: string;
-    location: string;
-    priceRange: string;
-    config: string;
-    certifications: string[];
-    extraInfo: string;
-    extraInfoGreen?: boolean;
-}
-
-const projects: Project[] = [
-    {
-        id: 1,
-        badge: "NEW LAUNCH",
-        image:
-            "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=120&h=120&fit=crop",
-        name: "Smartworld Residences by ...",
-        location: "Sector 98, Noida",
-        priceRange: "₹1.91 - 11.43 Cr",
-        config: "1, 2, 3, 4 BHK A...",
-        certifications: ["RERA"],
-        extraInfo: "Completion in Oct, 2030",
-        extraInfoGreen: false,
-    },
-    {
-        id: 2,
-        badge: "NEW LAUNCH",
-        image:
-            "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=120&h=120&fit=crop",
-        name: "Purva Silversky",
-        location: "Electronic City, Bangalore",
-        priceRange: "₹2.3 - 6.66 Cr",
-        config: "3, 4, 5 BHK Apart...",
-        certifications: ["RERA"],
-        extraInfo: "8.7% price increase in last 3 months in ...",
-        extraInfoGreen: true,
-    },
-    {
-        id: 3,
-        badge: "NEW ARRIVAL",
-        image:
-            "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=120&h=120&fit=crop",
-        name: "Urban Lakes Pha...",
-        location: "Konnagar, Hooghly",
-        priceRange: "₹52.33 - 72.77 L",
-        config: "2, 3 BHK Apartments",
-        certifications: ["RERA", "HIRA"],
-        extraInfo: "8.0% price increase in last ...",
-        extraInfoGreen: true,
-    },
-    {
-        id: 4,
-        badge: "NEW LAUNCH",
-        image:
-            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=120&h=120&fit=crop",
-        name: "Godrej Reserve",
-        location: "Kandivali East, Mumbai",
-        priceRange: "₹3.5 - 9.2 Cr",
-        config: "2, 3, 4 BHK Apart...",
-        certifications: ["RERA"],
-        extraInfo: "Completion in Dec, 2028",
-        extraInfoGreen: false,
-    },
-];
-
-const badgeColors: Record<BadgeType, string> = {
+const badgeColors: Record<string, string> = {
     "NEW LAUNCH": "bg-amber-400 text-amber-900",
     "NEW ARRIVAL": "bg-blue-400 text-blue-900",
 };
 
 const SCROLL_AMOUNT = 310; // roughly one card width + gap
 
-export function NewlyLaunched() {
+export function NewlyLaunched({ properties }: { properties: Property[] }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -154,88 +86,104 @@ export function NewlyLaunched() {
                     className="flex gap-4 overflow-x-auto"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
                 >
-                    {projects.map((project) => (
-                        <div
-                            key={project.id}
-                            className="flex-shrink-0 w-[290px] bg-card rounded-xl shadow-sm border border-border flex flex-col overflow-hidden"
-                        >
-                            {/* Badge */}
-                            <div className="px-3 pt-3 pb-0">
-                                <span
-                                    className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${badgeColors[project.badge]}`}
-                                >
-                                    {project.badge}
-                                </span>
-                            </div>
+                    {properties.map((p) => {
+                        // Dummy mapping for UI consistency since some fields might not exact match
+                        const badge = "NEW LAUNCH";
+                        const image = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=120&h=120&fit=crop";
+                        const name = p.title || "Untitled Property";
+                        const location = `${p.city || "Unknown City"}, ${p.state || "Unknown State"}`;
+                        const priceRange = p.asking_price ? `₹${Number(p.asking_price).toLocaleString("en-IN")}` : "Price on Request";
+                        const config = [
+                            p.bedrooms ? `${p.bedrooms} BHK` : null,
+                            p.property_type ? p.property_type.replace("_", " ") : null
+                        ].filter(Boolean).join(" ");
+                        const certifications = ["RERA"]; // Dummy for now
+                        const extraInfo = p.status === "active" ? "Ready to move" : "Under construction";
+                        const extraInfoGreen = p.status === "active";
 
-                            {/* Main Info */}
-                            <div className="flex gap-3 p-3">
-                                {/* Circular Image */}
-                                <div className="flex-shrink-0 relative">
-                                    <img
-                                        src={project.image}
-                                        alt={project.name}
-                                        className="w-16 h-16 rounded-full object-cover border-2 border-border"
-                                    />
-                                    {/* RERA / HIRA badges on image */}
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                                        {project.certifications.map((cert) => (
-                                            <span
-                                                key={cert}
-                                                className="flex items-center gap-0.5 bg-primary text-primary-foreground text-[8px] font-bold px-1 py-0.5 rounded"
-                                            >
-                                                <ShieldCheck size={8} />
-                                                {cert}
-                                            </span>
-                                        ))}
+                        return (
+                            <div
+                                key={p.id}
+                                className="flex-shrink-0 w-[290px] bg-card rounded-xl shadow-sm border border-border flex flex-col overflow-hidden"
+                            >
+                                {/* Badge */}
+                                <div className="px-3 pt-3 pb-0">
+                                    <span
+                                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${badgeColors[badge]}`}
+                                    >
+                                        {badge}
+                                    </span>
+                                </div>
+
+                                {/* Main Info */}
+                                <div className="flex gap-3 p-3">
+                                    {/* Circular Image */}
+                                    <div className="flex-shrink-0 relative">
+                                        <img
+                                            src={image}
+                                            alt={name}
+                                            className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                                        />
+                                        {/* RERA / HIRA badges on image */}
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+                                            {certifications.map((cert) => (
+                                                <span
+                                                    key={cert}
+                                                    className="flex items-center gap-0.5 bg-primary text-primary-foreground text-[8px] font-bold px-1 py-0.5 rounded"
+                                                >
+                                                    <ShieldCheck size={8} />
+                                                    {cert}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Text Details */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-bold text-card-foreground line-clamp-2 leading-snug" title={name}>
+                                            {name}
+                                        </h3>
+                                        <p className="text-xs text-muted-foreground mt-0.5 truncate" title={location}>
+                                            {location}
+                                        </p>
+                                        <p className="text-sm font-semibold text-foreground mt-1.5">
+                                            {priceRange}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground truncate capitalize">
+                                            {config}
+                                        </p>
+                                        <p
+                                            className={`text-xs mt-1 truncate ${extraInfoGreen
+                                                ? "text-green-600 font-medium"
+                                                : "text-muted-foreground"
+                                                }`}
+                                        >
+                                            {extraInfoGreen ? "" : "🕐 "}
+                                            {extraInfo}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Text Details */}
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-sm font-bold text-card-foreground truncate leading-snug">
-                                        {project.name}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                        {project.location}
-                                    </p>
-                                    <p className="text-sm font-semibold text-foreground mt-1.5">
-                                        {project.priceRange}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                        {project.config}
-                                    </p>
-                                    <p
-                                        className={`text-xs mt-1 truncate ${project.extraInfoGreen
-                                            ? "text-green-600 font-medium"
-                                            : "text-muted-foreground"
-                                            }`}
-                                    >
-                                        {project.extraInfoGreen ? "" : "🕐 "}
-                                        {project.extraInfo}
-                                    </p>
+                                {/* Divider */}
+                                <div className="h-px bg-border mx-3" />
+
+                                {/* Footer */}
+                                <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+                                    <div className="flex items-center gap-1.5 text-xs text-primary font-medium flex-shrink-0">
+                                        <Tag size={12} className="flex-shrink-0" />
+                                        <span className="leading-tight">
+                                            Get preferred options
+                                            <br />
+                                            @zero brokerage
+                                        </span>
+                                    </div>
+                                    <button className="flex-shrink-0 px-4 py-2 bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold rounded-lg border-0 cursor-pointer transition-opacity whitespace-nowrap">
+                                        View Details
+                                    </button>
                                 </div>
                             </div>
-
-                            {/* Divider */}
-                            <div className="h-px bg-border mx-3" />
-
-                            {/* Footer */}
-                            <div className="flex items-center justify-between px-3 py-2.5 gap-2">
-                                <div className="flex items-center gap-1.5 text-xs text-primary font-medium flex-shrink-0">
-                                    <Tag size={12} className="flex-shrink-0" />
-                                    <span className="leading-tight">
-                                        Get preferred options
-                                        <br />
-                                        @zero brokerage
-                                    </span>
-                                </div>
-                                <button className="flex-shrink-0 px-4 py-2 bg-primary hover:opacity-90 text-primary-foreground text-xs font-semibold rounded-lg border-0 cursor-pointer transition-opacity whitespace-nowrap">
-                                    View Number
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </section>

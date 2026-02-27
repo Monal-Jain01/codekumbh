@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Property } from "@/lib/schema/property.schema";
 import { PropertySearch } from "@/components/property-search";
 import { NewlyLaunched } from "@/components/newly-launched";
 import { redirect } from "next/navigation";
@@ -23,10 +24,19 @@ export default async function HomePage() {
     redirect("/auth/sign-up");
   }
 
+  // Fetch recent properties for Newly Launched section
+  const { data: recentProperties } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("is_active", true)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
-      <section className="w-full bg-gradient-to-b from-primary/5 to-background py-12 px-4">
+      <section className="w-full  py-12 px-4">
         <div className="max-w-4xl mx-auto text-center space-y-5">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
             AI-Powered Real Estate Intelligence
@@ -92,7 +102,7 @@ export default async function HomePage() {
 
       {/* Newly Launched */}
       <section className="w-full max-w-5xl mx-auto py-6 px-4">
-        <NewlyLaunched />
+        <NewlyLaunched properties={(recentProperties ?? []) as Property[]} />
       </section>
     </div>
   );

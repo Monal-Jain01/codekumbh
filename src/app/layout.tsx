@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import Navbar from "@/components/navbar";
+import { ThemeProvider } from "@/components/theme-provider";
+import { createClient } from "@/lib/supabase/server";
 import "@/lib/env"; // Validate required env vars at startup
 
 const geistSans = Geist({
@@ -20,29 +22,45 @@ export const metadata: Metadata = {
   description: "Smart property valuations, investment insights, and market analytics powered by AI agents with tool-calling.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const profileButtonLabel = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Profile";
+  const userEmail = user?.email;
+
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
 
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`  ${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50`}
       >
-        <Navbar
-          companyName="CodeHunt"
-          links={[
-            { label: 'Home', href: '/' },
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Properties', href: '/properties' },
-            { label: 'AI Agents', href: '/agents' },
-          ]}
-          profileButtonLabel="Profile"
-        />
-        {children}
-        <Toaster richColors position="top-right" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar
+            companyName="Investify Ai"
+            links={[
+              { label: 'Home', href: '/' },
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Properties', href: '/properties' },
+              { label: 'AI Agents', href: '/agents' },
+            ]}
+            profileButtonLabel={profileButtonLabel}
+            userEmail={userEmail}
+            isLoggedIn={!!user}
+          />
+          <main className="pt-30  bg-background min-h-screen">
+            {children}
+          </main>
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

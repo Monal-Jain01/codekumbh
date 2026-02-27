@@ -147,7 +147,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
       return;
     }
     toast.success("Welcome aboard! Your profile is all set.");
-    router.push("/profile");
+    router.push("/");
     router.refresh();
   }
 

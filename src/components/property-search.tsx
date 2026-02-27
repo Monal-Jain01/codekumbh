@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Mic, ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 const tabs = [
-    { label: "Buy", id: "buy" },
-    { label: "Rent", id: "rent" },
-    { label: "New Launch", id: "new-launch", dot: true },
-    { label: "Commercial", id: "commercial" },
-    { label: "Plots/Land", id: "plots-land" },
-    { label: "Projects", id: "projects" },
+    { label: "Apartment", id: "buy" },
+    { label: "Villa", id: "rent" },
+    { label: "House", id: "new-launch", dot: true },
+    { label: "Plot", id: "commercial" },
+    { label: "Commercial", id: "plots-land" },
 ];
 
 const propertyTypes = [
@@ -68,50 +68,17 @@ export function PropertySearch() {
                 {/* Spacer + divider + Post Property */}
                 <div className="ml-auto flex items-center flex-shrink-0">
                     <div className="w-px h-5 bg-gray-200 mx-2" />
-                    <button className="flex items-center gap-1.5 px-3 py-2 text-[13.5px] font-semibold text-[#003b6f] bg-transparent border-0 cursor-pointer whitespace-nowrap">
-                        Post Property
-                        <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide">
-                            FREE
-                        </span>
-                    </button>
+                    <Link href={"/properties/new"} >
+                        <button className="flex items-center gap-1.5 px-3 py-2 text-[13.5px] font-semibold text-[#003b6f] bg-transparent border-0 cursor-pointer whitespace-nowrap">
+                            Post Property
+                        </button>
+                    </Link>
                 </div>
             </div>
 
             {/* ── Search Row ── */}
             <div className="flex items-center gap-2 px-3 py-2.5 relative">
-                {/* Property Type Dropdown */}
-                <div className="relative flex-shrink-0">
-                    <button
-                        onClick={() => setDropdownOpen((p) => !p)}
-                        className="flex items-center gap-1.5 px-2 py-1.5 text-[13.5px] font-medium text-gray-700 bg-transparent border-0 cursor-pointer whitespace-nowrap hover:text-[#003b6f] transition-colors"
-                    >
-                        <span>{propertyType}</span>
-                        <ChevronDown size={14} className="text-gray-400" />
-                    </button>
 
-                    {dropdownOpen && (
-                        <ul className="absolute top-full left-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] list-none p-1.5 m-0 min-w-[170px] z-50">
-                            {propertyTypes.map((type) => (
-                                <li key={type}>
-                                    <button
-                                        onClick={() => {
-                                            setPropertyType(type);
-                                            setDropdownOpen(false);
-                                        }}
-                                        className={[
-                                            "block w-full px-4 py-2 text-[13.5px] text-left bg-transparent border-0 cursor-pointer rounded-lg transition-colors",
-                                            propertyType === type
-                                                ? "text-[#003b6f] font-semibold"
-                                                : "text-gray-600 hover:bg-blue-50 hover:text-[#003b6f]",
-                                        ].join(" ")}
-                                    >
-                                        {type}
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
 
                 {/* Vertical divider */}
                 <div className="w-px h-5 bg-gray-200 flex-shrink-0" />

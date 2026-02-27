@@ -65,7 +65,7 @@ export function CreatePropertyForm() {
       return;
     }
     toast.success("Property listed successfully!");
-    router.push(`/properties/${result.data.id}`);
+    router.push(`/properties`);
     router.refresh();
   }
 
@@ -127,11 +127,10 @@ export function CreatePropertyForm() {
                   key={pt.value}
                   type="button"
                   onClick={() => setPropertyType(pt.value)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                    propertyType === pt.value
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${propertyType === pt.value
                       ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
                       : "border-border bg-card text-muted-foreground hover:bg-accent"
-                  }`}
+                    }`}
                 >
                   <span>{pt.emoji}</span>
                   {pt.label}
