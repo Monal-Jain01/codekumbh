@@ -6,19 +6,20 @@ export const aiModels = {
 };
 
 export const systemPrompts = {
-	jsonAgent: "You are a higly capable AI-agent.Always respond in strictly VALID JSON format.",
+	general: "You are a highly capable AI assistant. Be concise and helpful.",
+	jsonAgent: "You are a highly capable AI agent. Always respond in strictly VALID JSON format.",
 };
 
-export async function runBackgroundAgent(prompt: string) {
+export async function runBackgroundAgent(prompt: string, systemPrompt?: string) {
 	try {
 		const { text } = await generateText({
 			model: aiModels.primary,
-			system: systemPrompts.jsonAgent,
+			system: systemPrompt ?? systemPrompts.general,
 			prompt: prompt,
 		});
 		return text;
 	} catch (error) {
 		console.error("AI Generation Failed:", error);
-		throw new Error("AI request fail ho gayi!");
-		}
+		throw new Error("AI generation failed.");
+	}
 }

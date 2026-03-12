@@ -13,6 +13,7 @@
     "@ai-sdk/google": "^3.0.31",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
+    "@trigger.dev/react-hooks": "^4.4.1",
     "@trigger.dev/sdk": "4.4.1",
     "ai": "^6.0.99",
     "class-variance-authority": "^0.7.1",
@@ -24,7 +25,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

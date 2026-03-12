@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     
     // Agar Error aaya, to use chupao mat, dikhao!
     console.error("Auth Exchange Error:", error.message); 
-    const errorUrl = new URL("/auth/auth-code-error", origin);
-    errorUrl.searchParams.set("error", error.message); // Asli error dikhao
+    const errorUrl = new URL("/auth/error", origin);
+    errorUrl.searchParams.set("error", error.message);
     return NextResponse.redirect(errorUrl);
   }
 
@@ -41,13 +41,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectTo);
     }
     // Agar yahan error aaya
-    const errorUrl = new URL("/auth/auth-code-error", origin);
+    const errorUrl = new URL("/auth/error", origin);
     errorUrl.searchParams.set("error", error.message);
     return NextResponse.redirect(errorUrl);
   }
 
   // 3. Agar na code hai, na token_hash
-  const errorUrl = new URL("/auth/auth-code-error", origin);
+  const errorUrl = new URL("/auth/error", origin);
   errorUrl.searchParams.set("error", "No code or token detected");
   return NextResponse.redirect(errorUrl);
 }
