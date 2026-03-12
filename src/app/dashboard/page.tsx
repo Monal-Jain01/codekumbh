@@ -18,6 +18,8 @@ import {
   MapPinOff,
   FileText,
   Percent,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardRealtimeListener } from "@/components/dashboard/realtime-listener";
@@ -69,6 +71,23 @@ export default async function DashboardPage() {
     .eq("buyer_id", user.id)
     .order("created_at", { ascending: false });
   const sentOffers = (myOffers ?? []) as Offer[];
+
+  // Fetch latest AI investment insight for this user
+  type AiInsight = {
+    projected_roi: number | null;
+    risk_analysis: string | null;
+    risk_tolerance: string | null;
+    confidence_score: number | null;
+    allocation_strategy: { property_investment_pct?: number; liquid_reserve_pct?: number; renovation_budget_pct?: number; reasoning?: string } | null;
+  };
+  const { data: insightData } = await supabase
+    .from("ai_investment_insights")
+    .select("projected_roi, risk_analysis, risk_tolerance, confidence_score, allocation_strategy")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const aiInsight = (insightData as AiInsight | null) ?? null;
 
   // Stats
   const totalPortfolioValue = properties.reduce(
@@ -372,6 +391,100 @@ export default async function DashboardPage() {
                   })}
                 </div>
               )}
+            </div>
+
+            {/* AI Market Insight */}
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border-b border-border">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+                  <Sparkles size={12} className="text-white" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">AI Market Insight</p>
+                {aiInsight && (
+                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
+                    LIVE
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                {!aiInsight ? (
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    AI insights will appear here after your first property listing is analysed.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* ROI + Risk row */}
+                    <div className="flex items-center gap-2">
+                      {aiInsight.projected_roi != null && (
+                        <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2.5 text-center">
+                          <p className="text-[10px] text-muted-foreground">Projected ROI</p>
+                          <p className="text-base font-bold text-emerald-700 dark:text-emerald-400">
+                            {aiInsight.projected_roi.toFixed(1)}%
+                          </p>
+                        </div>
+                      )}
+                      {aiInsight.risk_tolerance && (
+                        <div className={`flex-1 rounded-lg p-2.5 text-center ${
+                          aiInsight.risk_tolerance === "LOW"
+                            ? "bg-green-50 dark:bg-green-900/20"
+                            : aiInsight.risk_tolerance === "HIGH"
+                            ? "bg-red-50 dark:bg-red-900/20"
+                            : "bg-amber-50 dark:bg-amber-900/20"
+                        }`}>
+                          <ShieldCheck size={12} className={`mx-auto mb-0.5 ${
+                            aiInsight.risk_tolerance === "LOW" ? "text-green-600" : aiInsight.risk_tolerance === "HIGH" ? "text-red-600" : "text-amber-600"
+                          }`} />
+                          <p className="text-[10px] text-muted-foreground">Risk Level</p>
+                          <p className={`text-xs font-bold capitalize ${
+                            aiInsight.risk_tolerance === "LOW" ? "text-green-700 dark:text-green-400" : aiInsight.risk_tolerance === "HIGH" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
+                          }`}>
+                            {aiInsight.risk_tolerance.charAt(0) + aiInsight.risk_tolerance.slice(1).toLowerCase()}
+                          </p>
+                        </div>
+                      )}
+                      {aiInsight.confidence_score != null && (
+                        <div className="flex-1 bg-muted/50 rounded-lg p-2.5 text-center">
+                          <p className="text-[10px] text-muted-foreground">Confidence</p>
+                          <p className="text-base font-bold text-foreground">
+                            {aiInsight.confidence_score <= 1
+                              ? Math.round(aiInsight.confidence_score * 100)
+                              : Math.round(aiInsight.confidence_score)}%
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Risk analysis */}
+                    {aiInsight.risk_analysis && (
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+                        {aiInsight.risk_analysis}
+                      </p>
+                    )}
+
+                    {/* Allocation strategy */}
+                    {aiInsight.allocation_strategy?.property_investment_pct != null && (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                          Suggested Allocation
+                        </p>
+                        {[
+                          { label: "Property", pct: aiInsight.allocation_strategy.property_investment_pct, color: "bg-indigo-500" },
+                          { label: "Liquid Reserve", pct: aiInsight.allocation_strategy.liquid_reserve_pct ?? 0, color: "bg-emerald-500" },
+                          { label: "Renovation", pct: aiInsight.allocation_strategy.renovation_budget_pct ?? 0, color: "bg-amber-500" },
+                        ].map((item) => (
+                          <div key={item.label} className="flex items-center gap-2">
+                            <p className="text-[10px] text-muted-foreground w-20 shrink-0">{item.label}</p>
+                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                            </div>
+                            <p className="text-[10px] font-semibold text-foreground w-7 text-right">{item.pct}%</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Quick Links */}

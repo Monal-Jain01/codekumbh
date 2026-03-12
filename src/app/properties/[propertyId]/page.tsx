@@ -12,8 +12,14 @@ import { PropertyImageUpload } from "@/components/property/property-image-upload
 import { PropertyImageGallery } from "@/components/property/property-image-gallery";
 import { OfferActions } from "@/components/property/offer-actions";
 import { PropertyStatusManager } from "@/components/property/property-status-manager";
-import { RealtimeOfferListener, RealtimeContextListener } from "@/components/property/realtime-listeners";
+import {
+  RealtimeOfferListener,
+  RealtimeContextListener,
+  RealtimeValuationListener,
+  RealtimeBuyerOfferListener,
+} from "@/components/property/realtime-listeners";
 import { AIValuationCard } from "@/components/property/ai-valuation-card";
+import { NearbyPlacesMap } from "@/components/property/nearby-places-map";
 import type { Property, PropertyImage, Offer } from "@/lib/schema/property.schema";
 
 interface Props {
@@ -77,6 +83,16 @@ export default async function PropertyDetailPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
+  // Fetch latest AI valuation from DB (if available)
+  const { data: valuationData } = await supabase
+    .from("ai_property_valuations")
+    .select("predicted_price, price_range_low, price_range_high, confidence_score, reasoning, structured_factors")
+    .eq("property_id", propertyId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const dbValuation = valuationData ?? null;
+
   // Fetch buyer's own offers on this property (non-owner view)
   let myOffers: Offer[] = [];
   if (!isOwner) {
@@ -130,7 +146,9 @@ export default async function PropertyDetailPage({ params }: Props) {
     <div className="min-h-screen bg-background py-8 px-4">
       {/* Supabase Realtime Listeners */}
       <RealtimeContextListener propertyId={p.id} />
+      <RealtimeValuationListener propertyId={p.id} />
       {isOwner && <RealtimeOfferListener propertyId={p.id} />}
+      {!isOwner && <RealtimeBuyerOfferListener userId={user.id} propertyId={p.id} />}
 
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Back */}
@@ -201,6 +219,15 @@ export default async function PropertyDetailPage({ params }: Props) {
               </div>
             )}
 
+            {/* Nearby Places Map (only when coordinates are available) */}
+            {p.latitude != null && p.longitude != null && (
+              <NearbyPlacesMap
+                lat={Number(p.latitude)}
+                lng={Number(p.longitude)}
+                propertyTitle={p.title}
+              />
+            )}
+
             {/* Offers (owner only) */}
             {isOwner && (
               <div className="bg-card rounded-xl border border-border p-5">
@@ -216,10 +243,21 @@ export default async function PropertyDetailPage({ params }: Props) {
                         key={offer.id}
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border gap-3"
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-foreground flex items-center gap-1">
                             <IndianRupee size={13} />
                             {Number(offer.offer_price).toLocaleString("en-IN")}
+                            {offer.ai_risk_score != null && (
+                              <span className={`ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                offer.ai_risk_score >= 70
+                                  ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                  : offer.ai_risk_score >= 40
+                                  ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                                  : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                              }`}>
+                                AI {offer.ai_risk_score >= 70 ? "✓ Safe" : offer.ai_risk_score >= 40 ? "⚠ Moderate" : "✗ Risky"}
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Clock size={11} />
@@ -228,6 +266,19 @@ export default async function PropertyDetailPage({ params }: Props) {
                               <span className="ml-1">· {offer.buyer_name}</span>
                             )}
                           </p>
+                          {offer.ai_recommendation && (() => {
+                            try {
+                              const rec = typeof offer.ai_recommendation === "string"
+                                ? JSON.parse(offer.ai_recommendation)
+                                : offer.ai_recommendation;
+                              const summary = rec?.summary ?? rec?.recommendation ?? null;
+                              return summary ? (
+                                <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 italic">
+                                  &quot;{summary}&quot;
+                                </p>
+                              ) : null;
+                            } catch { return null; }
+                          })()}
                         </div>
                         <OfferActions
                           offerId={offer.id}
@@ -442,6 +493,7 @@ export default async function PropertyDetailPage({ params }: Props) {
               propertyType={p.property_type}
               city={p.city}
               areaSqft={p.area_sqft ? Number(p.area_sqft) : null}
+              dbValuation={dbValuation}
             />
           </div>
         </div>

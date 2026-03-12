@@ -14,7 +14,6 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { generatePropertyValuation } from "@/trigger/property-valuation";
 import type { enrichPropertyContext } from "@/trigger/property-context";
 import type { generateInvestmentInsights } from "@/trigger/investment-insights";
-import type { generatePortfolio } from "@/trigger/generate-portfolio";
 import type { analyzeOfferRisk } from "@/trigger/analyze-offer";
 
 // ---------------------------------------------------------------------------
@@ -102,7 +101,7 @@ export async function createProperty(
     description: parsed.data.description || null,
   };
 
-  // ── Fire-and-forget: trigger 3 AI background tasks (don't block response) ──
+  // ── Fire-and-forget: trigger AI background tasks (don't block response) ──
   void (async () => {
     try {
       await Promise.all([
@@ -133,10 +132,6 @@ export async function createProperty(
             propertyData: propertyPayload,
           }
         ),
-        tasks.trigger<typeof generatePortfolio>("generate-portfolio", {
-          userId,
-          trigger: "property_listed",
-        }),
       ]);
     } catch (triggerErr) {
       console.error("Failed to trigger background AI tasks:", triggerErr);

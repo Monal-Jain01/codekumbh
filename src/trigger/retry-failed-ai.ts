@@ -42,7 +42,7 @@ export const retryFailedAiTasks = schedules.task({
     const { data: unvaluedProps, error: valErr } = await supabaseAdmin
       .from("properties")
       .select(
-        `id, user_id, title, property_type, address, city, state, country,
+        `id, owner_id, title, property_type, address, city, state, country,
          area_sqft, bedrooms, bathrooms, year_built, lot_size, asking_price, description`
       )
       .not(
@@ -52,7 +52,7 @@ export const retryFailedAiTasks = schedules.task({
         // fetch all valuated property IDs first
         "(SELECT property_id FROM ai_property_valuations)"
       )
-      .eq("status", "listed")
+      .eq("status", "active")
       .limit(15);
 
     if (valErr) {
@@ -70,10 +70,10 @@ export const retryFailedAiTasks = schedules.task({
       const { data: allProps } = await supabaseAdmin
         .from("properties")
         .select(
-          `id, user_id, title, property_type, address, city, state, country,
+          `id, owner_id, title, property_type, address, city, state, country,
            area_sqft, bedrooms, bathrooms, year_built, lot_size, asking_price, description`
         )
-        .eq("status", "listed")
+        .eq("status", "active")
         .limit(50);
 
       const missing = (allProps ?? []).filter(
@@ -86,7 +86,7 @@ export const retryFailedAiTasks = schedules.task({
             "generate-property-valuation",
             {
               propertyId: prop.id,
-              userId: prop.user_id,
+              userId: prop.owner_id,
               propertyData: {
                 title: prop.title,
                 property_type: prop.property_type,
@@ -117,7 +117,7 @@ export const retryFailedAiTasks = schedules.task({
             "generate-property-valuation",
             {
               propertyId: prop.id,
-              userId: prop.user_id,
+              userId: prop.owner_id,
               propertyData: {
                 title: prop.title,
                 property_type: prop.property_type,
@@ -160,7 +160,7 @@ export const retryFailedAiTasks = schedules.task({
       .select(
         "id, title, property_type, address, city, state, country, area_sqft, asking_price"
       )
-      .eq("status", "listed")
+      .eq("status", "active")
       .limit(50);
 
     const missingContext = (contextProps ?? []).filter(
@@ -209,10 +209,10 @@ export const retryFailedAiTasks = schedules.task({
     const { data: allListedProps } = await supabaseAdmin
       .from("properties")
       .select(
-        `id, user_id, title, property_type, address, city, state, country,
+        `id, owner_id, title, property_type, address, city, state, country,
          area_sqft, bedrooms, bathrooms, asking_price`
       )
-      .eq("status", "listed")
+      .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -221,8 +221,8 @@ export const retryFailedAiTasks = schedules.task({
     // Group by user, take their most recent property, skip users that already have insights
     const userPropertyMap = new Map<string, ListedProp>();
     for (const prop of allListedProps ?? []) {
-      if (!insightsUserSet.has(prop.user_id) && !userPropertyMap.has(prop.user_id)) {
-        userPropertyMap.set(prop.user_id, prop);
+      if (!insightsUserSet.has(prop.owner_id) && !userPropertyMap.has(prop.owner_id)) {
+        userPropertyMap.set(prop.owner_id, prop);
       }
     }
 
@@ -234,7 +234,7 @@ export const retryFailedAiTasks = schedules.task({
           "generate-investment-insights",
           {
             propertyId: prop.id,
-            userId: prop.user_id,
+            userId: prop.owner_id,
             propertyData: {
               title: prop.title,
               property_type: prop.property_type,
@@ -250,9 +250,9 @@ export const retryFailedAiTasks = schedules.task({
           }
         );
         results.insights++;
-        logger.log(`Queued insights retry for user ${prop.user_id}`);
+        logger.log(`Queued insights retry for user ${prop.owner_id}`);
       } catch (e) {
-        results.errors.push(`insights:${prop.user_id}: ${String(e)}`);
+        results.errors.push(`insights:${prop.owner_id}: ${String(e)}`);
       }
     }
 
