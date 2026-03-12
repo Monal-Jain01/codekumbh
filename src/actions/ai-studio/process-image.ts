@@ -1,80 +1,9 @@
 "use server";
 
 import type { StudioTool } from "@/components/ai-studio/types";
+import { buildStudioPrompt } from "@/lib/ai/studio-prompts";
 
-/* ── Prompt builder ─────────────────────────────────────────────────────── */
-
-const STAGE_STYLES: Record<string, string> = {
-  modern:       "modern contemporary interior, clean lines, neutral palette, sleek furniture, minimalist",
-  coastal:      "coastal beach house interior, light blues, sandy whites, rattan and natural textures",
-  scandinavian: "scandinavian interior, light birch wood, white walls, cozy hygge textiles",
-  industrial:   "industrial loft interior, exposed concrete, metal-frame furniture, Edison lighting",
-  luxury:       "luxury interior, marble surfaces, velvet upholstery, gold fixtures, opulent decor",
-  minimal:      "minimalist zen interior, all-white, very sparse furniture, open empty floor",
-};
-
-const ORGANISE_LAYOUTS: Record<string, string> = {
-  "open-flow":    "open plan layout, furniture along walls, clear central walkways, maximised floor space",
-  "cozy-corner":  "cozy reading nook, armchair by window, floor lamp, intimate corner seating",
-  "dining-focus": "dining room centred layout, table as focal point, chairs arranged neatly",
-  "work-home":    "home office setup, desk by window, bookshelves, ergonomic workspace",
-  entertainment:  "entertainment living room, large sofa facing TV unit, side tables, ambient lighting",
-  zen:            "zen minimal space, floor cushions, indoor plants, low-profile furniture, calm",
-};
-
-const ENHANCE_STYLES: Record<string, string> = {
-  crisp:     "sharp crisp interior photography, high edge definition, noise reduction, crystal detail",
-  warm:      "warm golden-hour interior, sun streaming through windows, amber glow",
-  cool:      "cool bright daylight interior, blue-white light, fresh airy atmosphere",
-  vibrant:   "vibrant interior, rich bold saturated colours, high contrast, striking",
-  hdr:       "HDR interior photography, balanced highlights and shadows, wide tonal range",
-  cinematic: "cinematic interior, film grain, muted highlights, deep contrast, warm shadows",
-};
-
-function buildPrompt(
-  tool: StudioTool,
-  opts: { preset?: string; removeText?: string; replaceText?: string },
-): { prompt: string; fidelity: number } {
-  const base = "professional interior design photography, photorealistic, high quality";
-
-  switch (tool) {
-    case "stage":
-      return {
-        prompt: `${STAGE_STYLES[opts.preset ?? "modern"] ?? STAGE_STYLES.modern}, ${base}`,
-        fidelity: 0.45,
-      };
-
-    case "objects":
-      return {
-        prompt: [
-          opts.removeText && `remove the ${opts.removeText} completely`,
-          opts.replaceText && `add ${opts.replaceText} in its place naturally`,
-          "seamless believable result",
-          base,
-        ]
-          .filter(Boolean)
-          .join(", "),
-        fidelity: 0.60,
-      };
-
-    case "organise":
-      return {
-        prompt: `${ORGANISE_LAYOUTS[opts.preset ?? "open-flow"] ?? ORGANISE_LAYOUTS["open-flow"]}, ${base}`,
-        fidelity: 0.50,
-      };
-
-    case "enhance":
-      return {
-        prompt: `${ENHANCE_STYLES[opts.preset ?? "crisp"] ?? ENHANCE_STYLES.crisp}, ${base}`,
-        fidelity: 0.75, // high — just improve quality, not change style
-      };
-
-    default:
-      return { prompt: base, fidelity: 0.5 };
-  }
-}
-
-/* ── Server Action ─────────────────────────────────────────────────────── */
+/* ── Server Action — instant AI preview via Replicate ──────────────────── */
 
 export async function processImageWithAI(input: {
   /** Base64-encoded image: "data:image/jpeg;base64,..." */
@@ -87,62 +16,79 @@ export async function processImageWithAI(input: {
   | { success: true; outputBase64: string }
   | { success: false; error: string }
 > {
-  const apiKey = process.env.STABILITY_API_KEY;
-  if (!apiKey) {
+  const apiToken = process.env.REPLICATE_API_TOKEN;
+  if (!apiToken) {
     return {
       success: false,
-      error: "STABILITY_API_KEY not set — add it to .env.local",
+      error: "REPLICATE_API_TOKEN not set — add it to .env.local",
     };
   }
 
-  const { prompt, fidelity } = buildPrompt(input.tool, {
+  const { prompt, guidanceScale } = buildStudioPrompt(input.tool, {
     preset:      input.preset,
     removeText:  input.removeText,
     replaceText: input.replaceText,
   });
 
   try {
-    /* Convert base64 string → binary Buffer */
-    const rawBase64  = input.imageBase64.replace(/^data:image\/\w+;base64,/, "");
-    const imageBytes = Buffer.from(rawBase64, "base64");
-
-    const form = new FormData();
-    form.append("image",   new Blob([imageBytes], { type: "image/jpeg" }), "input.jpg");
-    form.append("prompt",  prompt);
-    form.append("fidelity",       String(fidelity));
-    form.append("output_format",  "jpeg");
-
-    const res = await fetch(
-      "https://api.stability.ai/v2beta/stable-image/control/style",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          Accept:        "application/json",
-        },
-        body: form,
+    // Replicate sync mode (Prefer: wait) — returns result in one call
+    const res = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+        Prefer: "wait",
       },
-    );
+      body: JSON.stringify({
+        version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
+        input: {
+          image: input.imageBase64,
+          prompt,
+          guidance_scale: guidanceScale,
+          prompt_strength: input.tool === "enhance" ? 0.3 : 0.55,
+          num_inference_steps: 30,
+          width: 1024,
+          height: 1024,
+        },
+      }),
+    });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       return {
         success: false,
-        error: `Stability AI ${res.status}: ${text.slice(0, 200)}`,
+        error: `Replicate ${res.status}: ${text.slice(0, 300)}`,
       };
     }
 
     const data = await res.json();
-    if (!data.image) {
+
+    // Replicate returns output as an array of URLs or a single URL
+    const outputUrl =
+      Array.isArray(data.output) ? data.output[0] : data.output;
+
+    if (!outputUrl) {
       return {
         success: false,
-        error: data.message ?? data.errors?.[0] ?? "No image returned",
+        error: data.error ?? "No output returned from Replicate",
       };
     }
 
+    // Fetch the output image and convert to base64 for the client
+    const imgRes = await fetch(outputUrl);
+    if (!imgRes.ok) {
+      return {
+        success: false,
+        error: `Failed to download result image: ${imgRes.status}`,
+      };
+    }
+
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    const b64 = imgBuffer.toString("base64");
+
     return {
       success: true,
-      outputBase64: `data:image/jpeg;base64,${data.image}`,
+      outputBase64: `data:image/png;base64,${b64}`,
     };
   } catch (err) {
     return { success: false, error: String(err) };

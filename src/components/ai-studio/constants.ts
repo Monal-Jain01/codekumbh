@@ -7,31 +7,6 @@ export const STAGE_PRESETS = [
   { id: "minimal",      label: "Minimal",      desc: "Pure white & open spaces",     from: "from-gray-100",   to: "to-gray-300",    filter: "brightness-120 saturate-60 contrast-95"           },
 ] as const;
 
-export const FURNITURE_CATS = [
-  { id: "sofa",     emoji: "🛋️", label: "Sofa",        items: ["L-Shape Corner","3-Seater Classic","Loveseat","Sectional Modular"] },
-  { id: "bed",      emoji: "🛏️", label: "Bed & Frame", items: ["King Platform","Queen Panel","Storage Bed","Canopy Frame"] },
-  { id: "table",    emoji: "🪵",  label: "Tables",      items: ["Dining 6-Seater","Coffee Table","Console Table","Study Desk"] },
-  { id: "lighting", emoji: "💡", label: "Lighting",    items: ["Pendant Globe","Arc Floor Lamp","LED Cove Strip","Chandelier"] },
-  { id: "storage",  emoji: "🗄️", label: "Storage",     items: ["Sliding Wardrobe","Open Bookshelf","Sideboard","Entertainment Unit"] },
-  { id: "decor",    emoji: "🖼️", label: "Decor",       items: ["Abstract Canvas","Indoor Plant","Wool Rug","Decorative Mirror"] },
-] as const;
-
-/** Items a user can pick as the object they want to replace */
-export const REPLACE_SOURCES = [
-  { id: "sofa",        emoji: "🛋️", label: "Sofa"          },
-  { id: "bed",         emoji: "🛏️", label: "Bed"           },
-  { id: "dining-set",  emoji: "🍽️", label: "Dining Set"    },
-  { id: "wardrobe",    emoji: "🗄️", label: "Wardrobe"      },
-  { id: "tv-unit",     emoji: "📺", label: "TV Unit"        },
-  { id: "lamp",        emoji: "💡", label: "Lamp"           },
-  { id: "rug",         emoji: "🟫", label: "Rug"            },
-  { id: "curtains",    emoji: "🪟", label: "Curtains"       },
-  { id: "bookshelf",   emoji: "📚", label: "Bookshelf"      },
-  { id: "coffee-table",emoji: "☕", label: "Coffee Table"   },
-  { id: "chair",       emoji: "🪑", label: "Chair"          },
-  { id: "decor-item",  emoji: "🖼️", label: "Decor Item"    },
-] as const;
-
 /** Layout presets for the Object Organiser tool */
 export const LAYOUT_PRESETS = [
   { id: "open-flow",     emoji: "🌬️", label: "Open Flow",     desc: "Maximise space, keep pathways clear"   },

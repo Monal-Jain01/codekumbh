@@ -12,9 +12,12 @@ import { cn } from "@/lib/utils";
 import type { StudioPhoto, StudioTool } from "./types";
 import { STAGE_PRESETS, LAYOUT_PRESETS, ENHANCE_PRESETS } from "./constants";
 import { processImageWithAI } from "@/actions/ai-studio/process-image";
+import { triggerStudioProcessing } from "@/actions/ai-studio/trigger-studio-processing";
 
 interface AIStudioProps {
   photo: StudioPhoto;
+  /** If set, the image has a DB row and AI results can be persisted */
+  propertyImageId?: string;
   onClose: () => void;
   onApply: (id: string, tool: StudioTool, preset?: string, outputUrl?: string) => void;
 }
@@ -24,14 +27,6 @@ const MOCK_STEPS: Record<StudioTool, string[]> = {
   objects:  ["Detecting object bounds", "Matching replacement item", "Compositing scene"],
   organise: ["Analysing room dimensions", "Planning optimal layout", "Rendering placement"],
   enhance:  ["Analysing lighting conditions", "Calibrating colour balance", "Applying enhancement"],
-  compare:  [],
-};
-
-const LIVE_STEPS: Record<StudioTool, string[]> = {
-  stage:    ["Encoding image", "Transferring style via Stability AI", "Decoding result"],
-  objects:  ["Encoding image", "Running object removal & placement", "Compositing result"],
-  organise: ["Encoding image", "Rearranging layout with AI", "Rendering scene"],
-  enhance:  ["Encoding image", "Applying quality enhancement", "Finalising output"],
   compare:  [],
 };
 
