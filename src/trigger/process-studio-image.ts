@@ -29,7 +29,7 @@ export const processStudioImage = task({
     }
 
     // ── 2. Call Replicate API via SDK ──────────────────────────────────
-    const { prompt, guidanceScale } = buildStudioPrompt(tool, { preset, removeText, replaceText });
+    const { prompt } = buildStudioPrompt(tool, { preset, removeText, replaceText });
     logger.log("Sending to Replicate", { model: getReplicateModel(), prompt: prompt.slice(0, 80) });
 
     const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
@@ -37,18 +37,20 @@ export const processStudioImage = task({
     const replicateOutput = await replicate.run(getReplicateModel(), {
       input: {
         prompt,
-        guidance:     guidanceScale,
-        steps:        30,
-        width:        1024,
-        height:       1024,
-        image_prompt: imageBase64,
+        input_images:     [imageBase64],   // array, not image_prompt
+        aspect_ratio:     "match_input_image",
+        output_format:    "jpg",
+        output_quality:   90,
+        safety_tolerance: 2,
       },
     });
 
-    const outputUrl = Array.isArray(replicateOutput) ? replicateOutput[0] : replicateOutput;
+    // Model output schema: { type: "string", format: "uri" } — a single URL
+    const rawOutput = replicateOutput as unknown;
+    const outputUrl = typeof rawOutput === "string" ? rawOutput : null;
 
-    if (!outputUrl || typeof outputUrl !== "string") {
-      logger.error("No output from Replicate", { replicateOutput });
+    if (!outputUrl) {
+      logger.error("No output from Replicate", { rawOutput });
       return { success: false as const, error: "No output returned from Replicate" };
     }
 
