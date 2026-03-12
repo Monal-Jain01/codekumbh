@@ -11,7 +11,8 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { StudioPhoto, StudioTool } from "./types";
 import { STAGE_PRESETS, LAYOUT_PRESETS, ENHANCE_PRESETS } from "./constants";
-import { processImageWithAI } from "@/actions/ai-studio/process-image";
+import { triggerStudioTask } from "@/actions/ai-studio/trigger-studio-task";
+import { checkRunStatus } from "@/actions/ai-studio/check-run-status";
 
 interface AIStudioProps {
   photo: StudioPhoto;
@@ -112,8 +113,8 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
         setLiveStatus("Converting image…");
         const base64 = await toBase64(photo.url);
 
-        setLiveStatus("Processing with AI… this may take 30–60 seconds");
-        const result = await processImageWithAI({
+        setLiveStatus("Triggering AI task…");
+        const triggerRes = await triggerStudioTask({
           imageBase64: base64,
           tool,
           preset:          preset ?? layoutPreset ?? enhancePreset ?? undefined,
@@ -122,21 +123,51 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
           propertyImageId: propertyImageId,
         });
 
-        if (!result.success) {
-          toast.error(`AI error: ${result.error}`);
+        if ("error" in triggerRes) {
+          toast.error(`Failed to start AI: ${triggerRes.error}`);
           setProcessing(false);
           return;
         }
 
-        setLiveStatus("Done!");
-        setOutputUrl(result.outputBase64);
-        setDone(true);
-        setProcessing(false);
-        onApply(photo.id, tool, preset ?? layoutPreset ?? enhancePreset ?? undefined, result.outputBase64);
+        const { runId } = triggerRes;
+        setLiveStatus("AI processing… (0s)");
 
-        if (propertyImageId) {
-          toast.success("AI image saved to gallery");
-        }
+        // Poll Trigger.dev run until complete
+        const startTime = Date.now();
+        const pollInterval = setInterval(async () => {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          setLiveStatus(`AI processing… (${elapsed}s)`);
+
+          const status = await checkRunStatus(runId);
+
+          if (status.status === "COMPLETED") {
+            clearInterval(pollInterval);
+            if (!status.output?.success || !status.output.outputBase64) {
+              toast.error(`AI error: ${status.output?.error ?? "No output returned"}`);
+              setProcessing(false);
+              return;
+            }
+            setLiveStatus("Done!");
+            setOutputUrl(status.output.outputBase64);
+            setDone(true);
+            setProcessing(false);
+            onApply(photo.id, tool, preset ?? layoutPreset ?? enhancePreset ?? undefined, status.output.outputBase64);
+            if (propertyImageId) toast.success("AI image saved to gallery");
+          } else if (status.status === "FAILED" || status.status === "CANCELED" || status.status === "SYSTEM_FAILURE" || status.status === "CRASHED") {
+            clearInterval(pollInterval);
+            toast.error(`Task failed: ${status.error ?? status.status}`);
+            setProcessing(false);
+          }
+        }, 5000);
+
+        // Timeout safeguard — 3 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setProcessing(prev => {
+            if (prev) toast.error("AI processing timed out. Please try again.");
+            return false;
+          });
+        }, 180_000);
       } catch (err) {
         toast.error(`Failed: ${String(err)}`);
         setProcessing(false);
