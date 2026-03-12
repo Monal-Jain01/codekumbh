@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "trigger:dev": "npx trigger.dev@latest dev",
-    "dev": "npx concurrently --kill-others --names \"next,trigger\" --prefix-colors \"yellow,blue\" \"next dev\" \"npm run trigger:dev\"",
+    "trigger:dev": "pnpx trigger.dev@latest dev",
+    "dev": "pnpx concurrently --kill-others --names \"next,trigger\" --prefix-colors \"yellow,blue\" \"next dev \" \"pnpm run trigger:dev\" ",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
