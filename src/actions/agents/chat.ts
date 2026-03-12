@@ -49,8 +49,8 @@ export async function sendAgentMessage(
     .single();
 
   if (dbError || !taskRow) {
-    console.error("DB Error creating agent task:", dbError);
-    return { error: "Failed to create agent task." };
+    console.error("DB Error creating agent task:", JSON.stringify(dbError, null, 2));
+    return { error: `Failed to create agent task: ${dbError?.message ?? "Unknown DB error"}` };
   }
 
   // 2. Trigger background processing via Trigger.dev

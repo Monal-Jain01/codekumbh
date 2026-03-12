@@ -157,12 +157,11 @@ export const processAgentChat = task({
         output_payload: {
           response: result.text.slice(0, 500),
           toolsUsed,
+          toolCallsCount: toolsUsed.length,
+          agentSteps: result.steps,
         },
         latency_ms: latencyMs,
         token_usage: Math.ceil(result.text.length / 4),
-        tools_used: toolsUsed,
-        tool_calls_count: toolsUsed.length,
-        agent_steps: result.steps,
       });
 
       return { success: true, taskId, toolsUsed };

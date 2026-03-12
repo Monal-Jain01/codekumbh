@@ -149,6 +149,7 @@ FIRST use your tools to gather real data, THEN provide your final JSON valuation
     }
 
     // Log to ai_agent_logs (including tool usage metadata)
+    const toolsUsed = agentResult.toolCalls.map((tc) => tc.toolName);
     const { error: logError } = await supabaseAdmin
       .from("ai_agent_logs")
       .insert({
@@ -157,12 +158,14 @@ FIRST use your tools to gather real data, THEN provide your final JSON valuation
         model_provider: "google",
         model_name: "gemini-2.5-flash",
         input_payload: { propertyId, propertyData },
-        output_payload: parsed,
+        output_payload: {
+          ...parsed,
+          toolsUsed,
+          toolCallsCount: toolsUsed.length,
+          agentSteps: agentResult.steps,
+        },
         latency_ms: latencyMs,
         token_usage: Math.ceil(rawText.length / 4),
-        tools_used: agentResult.toolCalls.map((tc) => tc.toolName),
-        tool_calls_count: agentResult.toolCalls.length,
-        agent_steps: agentResult.steps,
       });
 
     if (logError) {
