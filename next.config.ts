@@ -5,6 +5,18 @@ dns.setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "**.supabase.in",
+      },
+    ],
+  },
   experimental: {
     serverActions: {
       allowedOrigins: [

@@ -17,9 +17,11 @@ import { MakeOfferForm } from "@/components/property/make-offer-form";
 import { AIValuationCard } from "@/components/property/ai-valuation-card";
 import { PropertyContextCard } from "@/components/property/property-context-card";
 import { InvestmentInsightsCard } from "@/components/property/investment-insights-card";
+import { PropertyImageUpload } from "@/components/property/property-image-upload";
 import { RealtimeValuationListener, RealtimeOfferListener, RealtimeContextListener, RealtimeInsightsListener } from "@/components/property/realtime-listeners";
-import type { Property } from "@/lib/schema/property.schema";
+import type { Property, PropertyImage } from "@/lib/schema/property.schema";
 import type { Offer, Valuation } from "@/lib/schema/property.schema";
+import Image from "next/image";
 
 interface Props {
   params: Promise<{ propertyId: string }>;
@@ -95,6 +97,15 @@ export default async function PropertyDetailPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
+  // Fetch property images
+  const { data: propertyImages } = await supabase
+    .from("property_images")
+    .select("*")
+    .eq("property_id", propertyId)
+    .order("display_order", { ascending: true });
+  const images = (propertyImages ?? []) as PropertyImage[];
+  const coverImage = images.find((img) => img.is_cover) ?? images[0] ?? null;
+
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       {/* Supabase Realtime Listeners */}
@@ -115,19 +126,41 @@ export default async function PropertyDetailPage({ params }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Cover */}
-            <div className="h-56 sm:h-72 bg-gradient-to-br from-primary/10 to-accent rounded-xl border border-border flex items-center justify-center">
-              <span className="text-6xl">
-                {p.property_type === "apartment"
-                  ? "🏢"
-                  : p.property_type === "villa"
-                  ? "🏡"
-                  : p.property_type === "plot"
-                  ? "🌳"
-                  : p.property_type === "commercial"
-                  ? "🏪"
-                  : "🏠"}
-              </span>
+            {/* Cover Image / Fallback */}
+            {coverImage ? (
+              <div className="relative h-56 sm:h-72 rounded-xl overflow-hidden border border-border">
+                <Image
+                  src={coverImage.image_url}
+                  alt={p.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  priority
+                />
+              </div>
+            ) : (
+              <div className="h-56 sm:h-72 bg-gradient-to-br from-primary/10 to-accent rounded-xl border border-border flex items-center justify-center">
+                <span className="text-6xl">
+                  {p.property_type === "apartment"
+                    ? "🏢"
+                    : p.property_type === "villa"
+                    ? "🏡"
+                    : p.property_type === "plot"
+                    ? "🌳"
+                    : p.property_type === "commercial"
+                    ? "🏪"
+                    : "🏠"}
+                </span>
+              </div>
+            )}
+
+            {/* Image Gallery & Upload */}
+            <div className="bg-card rounded-xl border border-border p-5">
+              <PropertyImageUpload
+                propertyId={p.id}
+                initialImages={images}
+                isOwner={isOwner}
+              />
             </div>
 
             {/* Title + Meta */}
