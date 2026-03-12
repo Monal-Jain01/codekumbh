@@ -2,8 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { runAgentWithTools } from "@/lib/ai/config";
-import { agentTools } from "@/lib/ai/tools";
+import {
+  agentTools,
+  offerRiskTools,
+  portfolioTools,
+  fraudDetectionTools,
+} from "@/lib/ai/tools";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { ToolSet } from "ai";
 
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
   "property-valuation": `You are an expert Indian real estate valuation analyst AI with access to database tools.
@@ -24,6 +30,43 @@ You can search properties across cities, get market statistics, and analyze tren
 ALWAYS use your tools to pull real listing data and market metrics.
 Provide data-driven market insights: price trends, supply/demand dynamics, micro-market analysis.
 Use ₹ for Indian Rupee amounts. Be specific with statistics and comparisons.`,
+
+  "offer-risk": `You are an AI-powered offer risk assessment specialist for Indian real estate.
+You have access to tools that let you analyze property offers, compare against market data, and detect anomalies.
+ALWAYS use your tools to fetch actual offer data and market stats before making risk assessments.
+For each offer you analyze:
+1. Compare the offer amount to asking price and market averages
+2. Assess if the property listing has any anomalies (price outliers, suspicious data)
+3. Evaluate the risk level (low/medium/high) with specific reasons
+Use ₹ for Indian Rupee amounts. Be data-driven and specific.`,
+
+  "portfolio-optimization": `You are an AI portfolio optimization agent for Indian real estate investors.
+You have tools to analyze a user's portfolio, search comparable properties, and calculate investment metrics.
+ALWAYS use your tools to fetch the user's actual portfolio data before advising.
+Provide specific portfolio recommendations:
+- Diversification analysis (city, property type)
+- Underperforming or overweight positions
+- Rebalancing suggestions with specific property types or locations
+- ROI optimization and exit timing guidance
+Use ₹ for Indian Rupee amounts. Be specific and actionable.`,
+
+  "fraud-anomaly": `You are an AI fraud and anomaly detection specialist for Indian real estate listings.
+You have tools to detect listing anomalies, compare prices against market data, and analyze offer patterns.
+ALWAYS use your tools to run anomaly detection on properties before making assessments.
+Flag potential red flags:
+- Listings priced significantly above or below market (z-score analysis)
+- Suspiciously small/large areas
+- Unusual offer patterns
+Rate risk as low/medium/high and explain your reasoning with data.`,
+};
+
+const AGENT_TOOL_MAP: Record<string, ToolSet> = {
+  "property-valuation": agentTools,
+  "investment-advisory": agentTools,
+  "market-intelligence": agentTools,
+  "offer-risk": offerRiskTools,
+  "portfolio-optimization": portfolioTools,
+  "fraud-anomaly": fraudDetectionTools,
 };
 
 export async function sendAgentMessage(
@@ -41,7 +84,8 @@ export async function sendAgentMessage(
   if (message.length > 2000) return { error: "Message too long (max 2000 chars)." };
 
   const systemPrompt = AGENT_SYSTEM_PROMPTS[agentId];
-  if (!systemPrompt) return { error: "Unknown agent." };
+  const tools = AGENT_TOOL_MAP[agentId];
+  if (!systemPrompt || !tools) return { error: "Unknown agent." };
 
   // Build context from conversation history (last 10 messages)
   const recentHistory = conversationHistory.slice(-10);
@@ -49,7 +93,13 @@ export async function sendAgentMessage(
     ? `\n\nPrevious conversation:\n${recentHistory.map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`).join("\n")}\n\n`
     : "";
 
-  const fullPrompt = `${contextBlock}User: ${message}`;
+  // For portfolio/offer agents, inject user_id so tools can fetch user-specific data
+  const userContext =
+    ["portfolio-optimization", "offer-risk"].includes(agentId)
+      ? `\n[System context: Current user ID is "${user.id}". Use this to fetch user-specific data from tools.]\n`
+      : "";
+
+  const fullPrompt = `${contextBlock}${userContext}User: ${message}`;
 
   const startTime = Date.now();
 
@@ -57,7 +107,7 @@ export async function sendAgentMessage(
     const result = await runAgentWithTools(
       fullPrompt,
       systemPrompt,
-      agentTools,
+      tools,
       { maxSteps: 5 }
     );
 

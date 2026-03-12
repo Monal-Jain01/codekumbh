@@ -32,6 +32,30 @@ const agentInfo: Record<
     placeholder:
       "Ask about market trends (e.g., How has the property market in Pune performed in the last 6 months?)...",
   },
+  "offer-risk": {
+    name: "Offer Risk Assessment Agent",
+    description:
+      "Analyze offer amounts, buyer credibility, and market volatility to assess transaction risk.",
+    emoji: "🛡️",
+    placeholder:
+      "Ask about offer risks (e.g., I received an offer of 85L on my 2BHK in Gurgaon listed at 95L — should I accept?)...",
+  },
+  "portfolio-optimization": {
+    name: "Portfolio Optimization Agent",
+    description:
+      "AI-driven rebalancing, diversification analysis, and exit timing for your portfolio.",
+    emoji: "⚡",
+    placeholder:
+      "Ask about your portfolio (e.g., Analyze my portfolio and suggest diversification strategies)...",
+  },
+  "fraud-anomaly": {
+    name: "Fraud & Anomaly Detection Agent",
+    description:
+      "Detect suspicious listings, price manipulation, and anomalous patterns.",
+    emoji: "🔍",
+    placeholder:
+      "Ask about listing integrity (e.g., Check if a 3BHK in Mumbai listed at 15L is legitimate)...",
+  },
 };
 
 interface Props {

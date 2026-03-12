@@ -41,7 +41,7 @@ const agents = [
     description:
       "Analyze buyer and seller credibility, transaction history, and market volatility to assess the risk level of any property offer.",
     icon: ShieldAlert,
-    status: "coming_soon" as const,
+    status: "ready" as const,
     accent: "chart-3",
     bgClass: "bg-chart-3/10",
     iconClass: "text-chart-3",
@@ -63,7 +63,7 @@ const agents = [
     description:
       "Maximize returns across your real estate portfolio with AI-driven rebalancing suggestions, diversification analysis, and exit timing.",
     icon: Zap,
-    status: "coming_soon" as const,
+    status: "ready" as const,
     accent: "chart-5",
     bgClass: "bg-chart-5/10",
     iconClass: "text-chart-5",
@@ -74,7 +74,7 @@ const agents = [
     description:
       "Detect suspicious listings, price manipulation, fake documents, and anomalous transaction patterns using advanced ML models.",
     icon: AlertTriangle,
-    status: "coming_soon" as const,
+    status: "ready" as const,
     accent: "destructive",
     bgClass: "bg-destructive/10",
     iconClass: "text-destructive",

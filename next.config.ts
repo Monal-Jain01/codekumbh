@@ -8,4 +8,17 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
 };
 
+module.exports = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        'localhost:3000', // localhost
+        'congenial-telegram-v5wxp6xpx9gh645-3000.app.github.dev', // Codespaces
+      ],
+    },
+  },
+};
+
+
+
 export default nextConfig;
