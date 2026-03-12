@@ -71,9 +71,7 @@ export const onboardingStep1Schema = z.object({
 export type OnboardingStep1Input = z.infer<typeof onboardingStep1Schema>;
 
 export const onboardingStep2Schema = z.object({
-  investment_budget: z
-    .number({ message: "Budget must be a number" })
-    .positive("Budget must be greater than 0"),
+  investment_budget: z.number().positive("Budget must be greater than 0").optional(),
   risk_tolerance: z.enum(["low", "medium", "high"] as const, {
     message: "Risk tolerance must be low, medium, or high",
   }),

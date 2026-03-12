@@ -62,8 +62,9 @@ export async function saveOnboardingStep2(
   const { supabase, userId } = await getAuthenticatedUser();
   if (!supabase || !userId) return { error: "UNAUTHORIZED" };
 
+  const rawBudget = formData.get("investment_budget");
   const parsed = onboardingStep2Schema.safeParse({
-    investment_budget: Number(formData.get("investment_budget")),
+    investment_budget: rawBudget ? Number(rawBudget) : undefined,
     risk_tolerance: formData.get("risk_tolerance"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -71,7 +72,7 @@ export async function saveOnboardingStep2(
   const { error } = await supabase
     .from("profiles")
     .update({
-      investment_budget: parsed.data.investment_budget,
+      investment_budget: parsed.data.investment_budget ?? null,
       risk_tolerance: parsed.data.risk_tolerance,
       onboarding_step: 2,
       updated_at: new Date().toISOString(),

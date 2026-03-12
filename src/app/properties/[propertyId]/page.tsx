@@ -1,18 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  MapPin,
-  BedDouble,
-  Bath,
-  Ruler,
-  IndianRupee,
-  Calendar,
-  ArrowLeft,
-  Home,
-  User,
-  Clock,
-  Phone,
+  MapPin, BedDouble, Bath, Ruler, IndianRupee, Calendar,
+  ArrowLeft, Home, User, Clock, Phone, ArrowRight,
 } from "lucide-react";
 import { MakeOfferForm } from "@/components/property/make-offer-form";
 import { PropertyContextCard } from "@/components/property/property-context-card";
@@ -85,6 +77,18 @@ export default async function PropertyDetailPage({ params }: Props) {
     .limit(1)
     .maybeSingle();
 
+  // Fetch buyer's own offers on this property (non-owner view)
+  let myOffers: Offer[] = [];
+  if (!isOwner) {
+    const { data: myOfferData } = await supabase
+      .from("offers")
+      .select("*")
+      .eq("property_id", propertyId)
+      .eq("buyer_id", user.id)
+      .order("created_at", { ascending: false });
+    myOffers = (myOfferData ?? []) as Offer[];
+  }
+
   // Fetch property images
   const { data: propertyImages } = await supabase
     .from("property_images")
@@ -93,6 +97,34 @@ export default async function PropertyDetailPage({ params }: Props) {
     .order("display_order", { ascending: true });
   const images = (propertyImages ?? []) as PropertyImage[];
   const coverImage = images.find((img) => img.is_cover) ?? images[0] ?? null;
+
+  // Fetch similar properties (same city, different id)
+  const { data: similarData } = await supabase
+    .from("properties")
+    .select("id, title, property_type, city, state, asking_price, area_sqft, bedrooms")
+    .eq("is_active", true)
+    .eq("city", p.city ?? "")
+    .neq("id", p.id)
+    .limit(3);
+  const similarProperties = (similarData ?? []) as Pick<
+    Property,
+    "id" | "title" | "property_type" | "city" | "state" | "asking_price" | "area_sqft" | "bedrooms"
+  >[];
+
+  // Fetch cover images for similar properties
+  const similarIds = similarProperties.map((s) => s.id);
+  const { data: simImages } = similarIds.length
+    ? await supabase
+        .from("property_images")
+        .select("property_id, image_url")
+        .in("property_id", similarIds)
+        .eq("is_cover", true)
+    : { data: [] };
+  const simCoverMap: Record<string, string> = {};
+  for (const img of simImages ?? []) {
+    simCoverMap[(img as { property_id: string; image_url: string }).property_id] =
+      (img as { property_id: string; image_url: string }).image_url;
+  }
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
@@ -202,6 +234,8 @@ export default async function PropertyDetailPage({ params }: Props) {
                           status={offer.status}
                           buyerName={offer.buyer_name}
                           buyerPhone={offer.buyer_phone}
+                          offerPrice={Number(offer.offer_price)}
+                          counterPrice={offer.counter_price ?? null}
                         />
                       </div>
                     ))}
@@ -212,6 +246,79 @@ export default async function PropertyDetailPage({ params }: Props) {
 
             {/* Neighbourhood Intelligence */}
             <PropertyContextCard context={propertyContext ?? null} city={p.city} propertyType={p.property_type} />
+
+            {/* Similar Properties */}
+            {similarProperties.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Similar Properties in {p.city}
+                  </h2>
+                  <Link
+                    href={`/properties?city=${p.city}`}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    View all <ArrowRight size={11} />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {similarProperties.map((sp) => (
+                    <Link
+                      key={sp.id}
+                      href={`/properties/${sp.id}`}
+                      className="group bg-card rounded-xl border border-border overflow-hidden hover:border-primary/40 transition-all hover:shadow-md"
+                    >
+                      {/* Cover image */}
+                      <div className="relative h-32 bg-muted overflow-hidden">
+                        {simCoverMap[sp.id] ? (
+                          <Image
+                            src={simCoverMap[sp.id]}
+                            alt={sp.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="220px"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/30">
+                            🏠
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/50 text-white capitalize">
+                            {sp.property_type?.replace("_", " ")}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Info */}
+                      <div className="p-3 space-y-1">
+                        <p className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                          {sp.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin size={10} />
+                          {sp.city}, {sp.state}
+                        </p>
+                        <div className="flex items-center justify-between pt-1">
+                          <p className="text-xs font-bold text-foreground flex items-center gap-0.5">
+                            <IndianRupee size={10} />
+                            {sp.asking_price
+                              ? Number(sp.asking_price) >= 10_000_000
+                                ? (Number(sp.asking_price) / 10_000_000).toFixed(1) + " Cr"
+                                : (Number(sp.asking_price) / 100_000).toFixed(0) + " L"
+                              : "—"}
+                          </p>
+                          {sp.bedrooms != null && sp.bedrooms > 0 && (
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                              <BedDouble size={10} /> {sp.bedrooms} BHK
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -262,6 +369,58 @@ export default async function PropertyDetailPage({ params }: Props) {
                 <>
                   <div className="border-t border-border my-4" />
                   <MakeOfferForm propertyId={p.id} askingPrice={p.asking_price} />
+
+                  {/* My Offers — status tracker */}
+                  {myOffers.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        Your Offers
+                      </p>
+                      {myOffers.map((o) => (
+                        <div key={o.id} className="bg-muted/40 rounded-lg px-3 py-2 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-foreground flex items-center gap-0.5">
+                                <IndianRupee size={10} />
+                                {Number(o.offer_price).toLocaleString("en-IN")}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                              </p>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
+                              o.status === "accepted"
+                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                : o.status === "rejected"
+                                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                                : o.status === "countered"
+                                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                                : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                            }`}>
+                              {o.status === "pending" ? "⏳ Awaiting"
+                                : o.status === "accepted" ? "✓ Accepted"
+                                : o.status === "countered" ? "↔ Countered"
+                                : "✗ Rejected"}
+                            </span>
+                          </div>
+                          {o.status === "countered" && o.counter_price && (
+                            <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-md px-2 py-1.5">
+                              <ArrowRight size={10} className="text-amber-600" />
+                              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                                Owner&apos;s counter: <span className="font-bold">₹{Number(o.counter_price).toLocaleString("en-IN")}</span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {myOffers.some(o => o.status === "accepted") && ownerPhone && (
+                        <a href={`tel:${ownerPhone}`}
+                          className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 hover:underline">
+                          <Phone size={11} /> Call owner to proceed
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
 

@@ -248,6 +248,7 @@ export function ListingWizard() {
   const [lng, setLng]   = useState("");
   const [locating, setLocating] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const submittingRef = useRef(false);
   const [formData, setFormData] = useState<FormData | null>(null);
   const [descValue, setDescValue]         = useState("");
   const [descGenerating, setDescGenerating] = useState(false);
@@ -321,10 +322,12 @@ export function ListingWizard() {
   }
 
   async function handleSubmit() {
-    if (!formData) return;
+    if (!formData || submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     const result = await createProperty(formData);
     setLoading(false);
+    submittingRef.current = false;
     if ("error" in result) { toast.error(result.error); return; }
     toast.success("Property listed successfully!");
     router.push("/properties");

@@ -564,6 +564,51 @@ export async function getPropertyImages(
 }
 
 // ---------------------------------------------------------------------------
+// 12b. SEND COUNTER OFFER (owner → buyer)
+// ---------------------------------------------------------------------------
+
+export async function sendCounterOffer(
+  offerId: string,
+  counterPrice: number
+): Promise<{ success: true } | { error: string }> {
+  const { supabase, userId } = await getAuthenticatedUser();
+  if (!supabase || !userId) return { error: "UNAUTHORIZED" };
+
+  if (!counterPrice || counterPrice <= 0)
+    return { error: "Counter price must be greater than 0." };
+
+  // Fetch the offer + verify the current user owns the property
+  const { data: offer } = await supabase
+    .from("offers")
+    .select("id, property_id, status")
+    .eq("id", offerId)
+    .single();
+  if (!offer) return { error: "Offer not found." };
+  if (offer.status !== "pending")
+    return { error: "Only pending offers can be countered." };
+
+  const { data: property } = await supabase
+    .from("properties")
+    .select("owner_id")
+    .eq("id", offer.property_id)
+    .single();
+  if (!property || property.owner_id !== userId)
+    return { error: "You don't own this property." };
+
+  const { error: updateErr } = await supabase
+    .from("offers")
+    .update({
+      counter_price: counterPrice,
+      status: "countered",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", offerId);
+
+  if (updateErr) return { error: updateErr.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
 // 12. SEARCH PROPERTIES
 // ---------------------------------------------------------------------------
 
