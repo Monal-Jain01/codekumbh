@@ -15,16 +15,13 @@ import {
   Phone,
 } from "lucide-react";
 import { MakeOfferForm } from "@/components/property/make-offer-form";
-import { AIValuationCard } from "@/components/property/ai-valuation-card";
 import { PropertyContextCard } from "@/components/property/property-context-card";
-import { InvestmentInsightsCard } from "@/components/property/investment-insights-card";
 import { PropertyImageUpload } from "@/components/property/property-image-upload";
+import { PropertyImageGallery } from "@/components/property/property-image-gallery";
 import { OfferActions } from "@/components/property/offer-actions";
 import { PropertyStatusManager } from "@/components/property/property-status-manager";
-import { RealtimeValuationListener, RealtimeOfferListener, RealtimeContextListener, RealtimeInsightsListener } from "@/components/property/realtime-listeners";
-import type { Property, PropertyImage } from "@/lib/schema/property.schema";
-import type { Offer, Valuation } from "@/lib/schema/property.schema";
-import Image from "next/image";
+import { RealtimeOfferListener, RealtimeContextListener } from "@/components/property/realtime-listeners";
+import type { Property, PropertyImage, Offer } from "@/lib/schema/property.schema";
 
 interface Props {
   params: Promise<{ propertyId: string }>;
@@ -78,30 +75,11 @@ export default async function PropertyDetailPage({ params }: Props) {
     ownerPhone = ownerProfile?.phone ?? null;
   }
 
-  // Fetch latest AI valuation
-  const { data: latestValuation } = await supabase
-    .from("ai_property_valuations")
-    .select("*")
-    .eq("property_id", propertyId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const valuation = (latestValuation ?? null) as Valuation | null;
-
   // Fetch property context (neighbourhood data)
   const { data: propertyContext } = await supabase
     .from("property_context")
     .select("*")
     .eq("property_id", propertyId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // Fetch investment insights for this property's owner
-  const { data: investmentInsight } = await supabase
-    .from("ai_investment_insights")
-    .select("*")
-    .eq("user_id", p.owner_id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -118,9 +96,7 @@ export default async function PropertyDetailPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       {/* Supabase Realtime Listeners */}
-      <RealtimeValuationListener propertyId={p.id} />
       <RealtimeContextListener propertyId={p.id} />
-      <RealtimeInsightsListener userId={user.id} />
       {isOwner && <RealtimeOfferListener propertyId={p.id} />}
 
       <div className="max-w-4xl mx-auto space-y-6">
@@ -135,42 +111,23 @@ export default async function PropertyDetailPage({ params }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Cover Image / Fallback */}
-            {coverImage ? (
-              <div className="relative h-56 sm:h-72 rounded-xl overflow-hidden border border-border">
-                <Image
-                  src={coverImage.image_url}
-                  alt={p.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                  priority
+            {/* Gallery with AI Studio — all users */}
+            <PropertyImageGallery
+              images={images}
+              propertyTitle={p.title}
+              propertyType={p.property_type ?? ""}
+            />
+
+            {/* Image management — owner only */}
+            {isOwner && (
+              <div className="bg-card rounded-xl border border-border p-5">
+                <PropertyImageUpload
+                  propertyId={p.id}
+                  initialImages={images}
+                  isOwner={isOwner}
                 />
               </div>
-            ) : (
-              <div className="h-56 sm:h-72 bg-gradient-to-br from-primary/10 to-accent rounded-xl border border-border flex items-center justify-center">
-                <span className="text-6xl">
-                  {p.property_type === "apartment"
-                    ? "🏢"
-                    : p.property_type === "villa"
-                    ? "🏡"
-                    : p.property_type === "plot"
-                    ? "🌳"
-                    : p.property_type === "commercial"
-                    ? "🏪"
-                    : "🏠"}
-                </span>
-              </div>
             )}
-
-            {/* Image Gallery & Upload */}
-            <div className="bg-card rounded-xl border border-border p-5">
-              <PropertyImageUpload
-                propertyId={p.id}
-                initialImages={images}
-                isOwner={isOwner}
-              />
-            </div>
 
             {/* Title + Meta */}
             <div>
@@ -252,18 +209,8 @@ export default async function PropertyDetailPage({ params }: Props) {
               </div>
             )}
 
-            {/* AI Valuation Report */}
-            <AIValuationCard
-              propertyId={p.id}
-              askingPrice={p.asking_price}
-              valuation={valuation}
-            />
-
             {/* Neighbourhood Intelligence */}
             <PropertyContextCard context={propertyContext ?? null} />
-
-            {/* Investment Insights */}
-            <InvestmentInsightsCard insight={investmentInsight ?? null} />
           </div>
 
           {/* Sidebar */}

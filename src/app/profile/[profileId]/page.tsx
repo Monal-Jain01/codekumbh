@@ -4,7 +4,6 @@ import { Mail, Phone, Building2, Calendar, Shield, User, FileText } from "lucide
 import { LogoutButton } from "@/components/auth/logout-button";
 import { EditProfileForm } from "@/components/profile/edit-profile-form";
 import { AvatarUploadForm } from "@/components/profile/avatar-upload-form";
-import { InvestmentPreferencesForm } from "@/components/profile/investment-preferences-form";
 import Link from "next/link";
 import type { Profile } from "@/lib/schema/profile.schema";
 
@@ -38,8 +37,6 @@ export default async function ProfilePage({ params }: Props) {
         full_name: user.user_metadata?.full_name ?? null,
         phone: user.user_metadata?.phone ?? null,
         organization: null,
-        investment_budget: null,
-        risk_tolerance: null,
         onboarding_completed: false,
         onboarding_step: 0,
       })
@@ -244,16 +241,12 @@ export default async function ProfilePage({ params }: Props) {
           )}
         </div>
 
-        {/* ── Investment Preferences — owner only ──────────────────────────── */}
-        {isOwner && <InvestmentPreferencesForm profile={typedProfile} />}
-
         {/* ── Onboarding nudge ─────────────────────────────────────────────── */}
         {isOwner && !typedProfile.onboarding_completed && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-800 space-y-1">
             <p className="font-semibold">Finish setting up your profile</p>
             <p className="text-amber-700">
-              Add your investment budget and risk tolerance to unlock AI-powered
-              property valuations and investment insights.
+              Add your details to complete your Estator profile.
             </p>
           </div>
         )}

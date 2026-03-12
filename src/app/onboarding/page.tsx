@@ -55,9 +55,9 @@ export default async function OnboardingPage() {
     };
   }
 
-  // Already completed → send to profile
+  // Already completed → send home
   if (profile?.onboarding_completed) {
-    redirect(`/profile/${user.id}`);
+    redirect("/");
   }
 
   return <OnboardingWizard profile={profile as Profile} />;

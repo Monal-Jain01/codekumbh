@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CodeHunt — AI-Powered Real Estate Intelligence",
-  description: "Smart property valuations, investment insights, and market analytics powered by AI agents with tool-calling.",
+  title: "Estator — Find Your Perfect Property in India",
+  description: "Discover, buy, and sell properties across India with smart search, AI-powered market insights, and verified listings.",
 };
 
 export default async function RootLayout({
@@ -45,12 +45,11 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Navbar
-            companyName="Investify Ai"
+            companyName="Estator"
             links={[
               { label: 'Home', href: '/' },
               { label: 'Dashboard', href: '/dashboard' },
               { label: 'Properties', href: '/properties' },
-              { label: 'AI Agents', href: '/agents' },
             ]}
             profileButtonLabel={profileButtonLabel}
             userEmail={userEmail}

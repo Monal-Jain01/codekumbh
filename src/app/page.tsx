@@ -6,13 +6,12 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight,
-  Building2,
-  Bot,
-  Search,
   TrendingUp,
   ShieldCheck,
   BarChart3,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -20,11 +19,16 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/auth/sign-up");
+  /* Logged-in but not onboarded → complete setup first */
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single();
+    if (!profile?.onboarding_completed) redirect("/onboarding");
   }
 
-  // Fetch recent properties for Newly Launched section
   const { data: recentProperties } = await supabase
     .from("properties")
     .select("*")
@@ -33,128 +37,164 @@ export default async function HomePage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const { count: totalCount } = await supabase
+    .from("properties")
+    .select("*", { count: "exact", head: true })
+    .eq("is_active", true)
+    .eq("status", "active");
+
   return (
-    <div className="flex flex-col items-center">
-      {/* Hero Section */}
-      <section className="w-full  py-12 px-4">
-        <div className="max-w-4xl mx-auto text-center space-y-5">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-            AI-Powered Real Estate Intelligence
+    <div className="flex flex-col">
+      {/* ── Hero ── */}
+      <section className="relative w-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 py-20 px-4 overflow-hidden">
+        {/* decorative blobs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative max-w-3xl mx-auto text-center space-y-6">
+          <Badge variant="secondary" className="bg-white/10 text-white border-white/20 hover:bg-white/10 text-xs px-3 py-1">
+            🇮🇳 India&apos;s Real Estate Platform
+          </Badge>
+
+          <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
+            Find Your Perfect
+            <span className="block text-indigo-300">Property in India</span>
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
-            Find, evaluate, and invest in properties with confidence using our
-            AI agents and real-time market data.
+
+          <p className="text-slate-300 text-base max-w-xl mx-auto leading-relaxed">
+            Discover, buy, and sell properties across India with smart search,
+            verified listings, and zero brokerage.
           </p>
-          {/* Search */}
+
           <div className="flex justify-center">
             <PropertySearch />
+          </div>
+
+          {/* Trust stats */}
+          <div className="flex items-center justify-center flex-wrap gap-6 pt-2">
+            <Stat value={String(totalCount ?? 0) + "+"} label="Active Listings" />
+            <div className="w-px h-8 bg-white/20 hidden sm:block" />
+            <Stat value="50+" label="Cities Covered" />
+            <div className="w-px h-8 bg-white/20 hidden sm:block" />
+            <Stat value="₹0" label="Brokerage" />
           </div>
         </div>
       </section>
 
-      {/* Quick Actions */}
+      {/* ── Category chips ── */}
       <section className="w-full max-w-5xl mx-auto py-8 px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <QuickCard
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-4">Browse by type</p>
+        <div className="flex flex-wrap gap-3">
+          {CATEGORIES.map((cat) => (
+            <Link
+              key={cat.value}
+              href={`/properties?type=${cat.value}`}
+              className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 shadow-sm"
+            >
+              <span className="text-lg">{cat.emoji}</span>
+              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                {cat.label}
+              </span>
+            </Link>
+          ))}
+          <Link
             href="/properties"
-            icon={<Building2 size={22} className="text-chart-1" />}
-            title="Browse Properties"
-            description="Explore active listings across cities"
-          />
-          <QuickCard
-            href="/agents"
-            icon={<Bot size={22} className="text-chart-2" />}
-            title="AI Agents"
-            description="Property valuation, market intelligence & more"
-          />
-          <QuickCard
-            href="/search"
-            icon={<Search size={22} className="text-chart-4" />}
-            title="Smart Search"
-            description="Find properties by location, type, or budget"
-          />
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all duration-200"
+          >
+            View All <ArrowRight size={13} />
+          </Link>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="w-full max-w-5xl mx-auto py-6 px-4">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          Why CodeHunt?
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FeatureCard
-            icon={<TrendingUp size={18} className="text-chart-1" />}
-            title="Smart Valuations"
-            description="AI models trained on 10M+ data points for accurate property price estimates."
-          />
-          <FeatureCard
-            icon={<ShieldCheck size={18} className="text-chart-2" />}
-            title="Risk Analysis"
-            description="Comprehensive fraud detection and offer risk scoring before you commit."
-          />
-          <FeatureCard
-            icon={<BarChart3 size={18} className="text-chart-4" />}
-            title="Market Insights"
-            description="Real-time trends, demand-supply metrics, and micro-market analytics."
-          />
-        </div>
-      </section>
-
-      {/* Newly Launched */}
-      <section className="w-full max-w-5xl mx-auto py-6 px-4">
+      {/* ── Newly Launched ── */}
+      <section className="w-full max-w-5xl mx-auto py-2 px-4">
         <NewlyLaunched properties={(recentProperties ?? []) as Property[]} />
+      </section>
+
+      {/* ── Why Estator ── */}
+      <section className="w-full max-w-5xl mx-auto py-10 px-4">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950/40 border border-border p-8">
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-2">Why Estator</p>
+          <h2 className="text-2xl font-bold text-foreground mb-8">
+            The smarter way to find property
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <Feature
+              icon={<TrendingUp size={20} className="text-indigo-500" />}
+              bg="bg-indigo-100 dark:bg-indigo-900/40"
+              title="Smart Valuations"
+              description="Get accurate price estimates based on thousands of real listings and local market data."
+            />
+            <Feature
+              icon={<ShieldCheck size={20} className="text-emerald-500" />}
+              bg="bg-emerald-100 dark:bg-emerald-900/40"
+              title="Verified Listings"
+              description="Every listing is reviewed for authenticity. Buy and sell with complete confidence."
+            />
+            <Feature
+              icon={<BarChart3 size={20} className="text-blue-500" />}
+              bg="bg-blue-100 dark:bg-blue-900/40"
+              title="Market Insights"
+              description="Real-time price trends and demand signals for every city and neighbourhood."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="w-full max-w-5xl mx-auto py-4 px-4 pb-16">
+        <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="text-center sm:text-left">
+            <h3 className="text-xl font-bold text-white">Ready to list your property?</h3>
+            <p className="text-indigo-200 text-sm mt-1">Reach thousands of verified buyers. Zero brokerage, always.</p>
+          </div>
+          <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shrink-0">
+            <Link href="/properties/new">
+              List Your Property <ArrowRight size={16} className="ml-2" />
+            </Link>
+          </Button>
+        </div>
       </section>
     </div>
   );
 }
 
-/* ── Helper Components ───────────────────────────────────────────────── */
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
 
-function QuickCard({
-  href,
-  icon,
-  title,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
+const CATEGORIES = [
+  { value: "apartment", label: "Apartment", emoji: "🏢" },
+  { value: "villa", label: "Villa", emoji: "🏡" },
+  { value: "independent_house", label: "House", emoji: "🏠" },
+  { value: "plot", label: "Plot", emoji: "🌳" },
+  { value: "commercial", label: "Commercial", emoji: "🏪" },
+];
+
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <Link
-      href={href}
-      className="group bg-card border border-border rounded-xl p-5 flex items-start gap-3.5 hover:shadow-md hover:border-primary/20 transition-all duration-300"
-    >
-      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
-          {title} <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </Link>
+    <div className="text-center">
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+    </div>
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
+function Feature({
+  icon, bg, title, description,
 }: {
   icon: React.ReactNode;
+  bg: string;
   title: string;
   description: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-5 space-y-2">
-      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+    <div className="flex flex-col gap-3">
+      <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
         {icon}
       </div>
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{description}</p>
+      </div>
     </div>
   );
 }

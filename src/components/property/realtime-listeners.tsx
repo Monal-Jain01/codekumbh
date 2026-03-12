@@ -6,28 +6,6 @@ import { useRealtimeSubscription } from "@/lib/supabase/realtime";
 
 /**
  * Invisible component that subscribes to Supabase Realtime
- * for new AI valuations on a specific property.
- * When a new valuation is inserted, it auto-refreshes the page.
- */
-export function RealtimeValuationListener({ propertyId }: { propertyId: string }) {
-  const router = useRouter();
-
-  useRealtimeSubscription({
-    table: "ai_property_valuations",
-    event: "INSERT",
-    filterColumn: "property_id",
-    filterValue: propertyId,
-    onEvent: () => {
-      toast.success("AI Valuation report is ready!");
-      router.refresh();
-    },
-  });
-
-  return null;
-}
-
-/**
- * Invisible component that subscribes to Supabase Realtime
  * for new offers on a specific property.
  * When a new offer arrives, it auto-refreshes the page and shows a toast.
  */
@@ -65,26 +43,6 @@ export function RealtimeContextListener({ propertyId }: { propertyId: string }) 
     filterValue: propertyId,
     onEvent: () => {
       toast.success("Neighbourhood intelligence is ready!");
-      router.refresh();
-    },
-  });
-
-  return null;
-}
-
-/**
- * Listens for new investment insights.
- */
-export function RealtimeInsightsListener({ userId }: { userId: string }) {
-  const router = useRouter();
-
-  useRealtimeSubscription({
-    table: "ai_investment_insights",
-    event: "INSERT",
-    filterColumn: "user_id",
-    filterValue: userId,
-    onEvent: () => {
-      toast.success("Investment insights are ready!");
       router.refresh();
     },
   });

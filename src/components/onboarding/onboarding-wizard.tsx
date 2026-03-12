@@ -157,7 +157,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome to CodeHunt
+            Welcome to Estator
           </h1>
           <p className="text-gray-500 mt-1">
             Let&apos;s set up your profile in a few quick steps

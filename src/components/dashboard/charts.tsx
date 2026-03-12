@@ -166,7 +166,7 @@ export function OfferStatusChart({
 
 /* ── Portfolio Value by Property ──────────────────────────────────────── */
 
-export function PortfolioValueChart({
+export function ListingsValueChart({
   properties,
 }: {
   properties: { title: string; asking_price?: number | string | null; property_type: string | null }[];
