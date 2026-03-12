@@ -302,6 +302,7 @@ export default async function DashboardPage() {
             {/* Quick Links */}
             <div className="bg-card rounded-xl border border-border p-4 space-y-2">
               <h3 className="text-sm font-semibold text-foreground mb-2">Quick Links</h3>
+              <QuickLink href="/dashboard/portfolio" icon={<TrendingUp size={14} />} label="My AI Portfolio" />
               <QuickLink href="/agents" icon={<Bot size={14} />} label="AI Agents" />
               <QuickLink href="/properties" icon={<Eye size={14} />} label="Browse Properties" />
               <QuickLink href="/search" icon={<BarChart3 size={14} />} label="Search Properties" />

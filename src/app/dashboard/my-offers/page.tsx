@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   XCircle,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 import type { Offer } from "@/lib/schema/property.schema";
 
@@ -106,20 +107,20 @@ function OfferList({
       {offers.map((o) => {
         const prop = o.properties;
         return (
-          <Link
+        <div
             key={o.id}
-            href={`/properties/${o.property_id}`}
-            className="flex items-center gap-4 bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
+            className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-4">
+            <Link href={`/properties/${o.property_id}`} className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent flex items-center justify-center flex-shrink-0">
               <span className="text-lg">
                 {prop?.property_type === "apartment" ? "🏢" : prop?.property_type === "villa" ? "🏡" : prop?.property_type === "plot" ? "🌳" : prop?.property_type === "commercial" ? "🏪" : "🏠"}
               </span>
-            </div>
+            </Link>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">
+              <Link href={`/properties/${o.property_id}`} className="text-sm font-semibold text-foreground truncate block hover:text-primary transition-colors">
                 {prop?.title ?? "Property"}
-              </p>
+              </Link>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {prop?.city}, {prop?.state}
               </p>
@@ -144,7 +145,16 @@ function OfferList({
               )}
               <StatusBadge status={o.status} />
             </div>
-          </Link>
+          </div>
+            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
+              <Link
+                href={`/offers/${o.id}`}
+                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                <Sparkles size={11} /> View AI Analysis
+              </Link>
+            </div>
+          </div>
         );
       })}
     </div>

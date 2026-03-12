@@ -10,6 +10,7 @@ import {
   Building2,
   User,
   Phone,
+  Sparkles,
 } from "lucide-react";
 import { OfferActions } from "@/components/property/offer-actions";
 import type { Offer, Property } from "@/lib/schema/property.schema";
@@ -140,17 +141,24 @@ function OfferList({ offers }: { offers: (Offer & { property_title: string; prop
             </div>
           </div>
 
-          {/* Bottom row: accept/reject buttons */}
+          {/* Bottom row: accept/reject buttons + AI analysis link */}
           <div className="flex items-center justify-between pt-2 border-t border-border">
-            {o.buyer_phone && (
-              <a
-                href={`tel:${o.buyer_phone}`}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+            <div className="flex items-center gap-3">
+              {o.buyer_phone && (
+                <a
+                  href={`tel:${o.buyer_phone}`}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Phone size={11} /> {o.buyer_phone}
+                </a>
+              )}
+              <Link
+                href={`/offers/${o.id}`}
+                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
               >
-                <Phone size={11} /> {o.buyer_phone}
-              </a>
-            )}
-            {!o.buyer_phone && <div />}
+                <Sparkles size={11} /> AI Analysis
+              </Link>
+            </div>
             <OfferActions
               offerId={o.id}
               status={o.status}

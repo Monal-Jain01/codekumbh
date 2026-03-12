@@ -158,6 +158,21 @@ export async function completeOnboarding(
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  // Fire-and-forget: generate AI portfolio baseline after onboarding
+  void (async () => {
+    try {
+      const { tasks } = await import("@trigger.dev/sdk/v3");
+      const { generatePortfolio } = await import("@/trigger/generate-portfolio");
+      await tasks.trigger<typeof generatePortfolio>("generate-portfolio", {
+        userId,
+        trigger: "onboarding",
+      });
+    } catch (err) {
+      console.error("Failed to trigger portfolio generation after onboarding:", err);
+    }
+  })();
+
   return { success: true };
 }
 

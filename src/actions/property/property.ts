@@ -13,6 +13,8 @@ import { uploadFile, deleteFile, getPublicUrl } from "@/lib/supabase/storage";
 import type { generatePropertyValuation } from "@/trigger/property-valuation";
 import type { enrichPropertyContext } from "@/trigger/property-context";
 import type { generateInvestmentInsights } from "@/trigger/investment-insights";
+import type { generatePortfolio } from "@/trigger/generate-portfolio";
+import type { analyzeOfferRisk } from "@/trigger/analyze-offer";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -130,6 +132,10 @@ export async function createProperty(
             propertyData: propertyPayload,
           }
         ),
+        tasks.trigger<typeof generatePortfolio>("generate-portfolio", {
+          userId,
+          trigger: "property_listed",
+        }),
       ]);
     } catch (triggerErr) {
       console.error("Failed to trigger background AI tasks:", triggerErr);
@@ -228,6 +234,21 @@ export async function makeOffer(
     .single();
 
   if (error) return { error: error.message };
+
+  // Fire-and-forget: AI risk analysis on the new offer
+  void (async () => {
+    try {
+      await tasks.trigger<typeof analyzeOfferRisk>("analyze-offer-risk", {
+        offerId: data.id,
+        propertyId: data.property_id,
+        buyerId: userId,
+        offerPrice: parsed.data.offer_price,
+      });
+    } catch (err) {
+      console.error("Failed to trigger offer risk analysis:", err);
+    }
+  })();
+
   return { data: data as Offer };
 }
 
