@@ -8,6 +8,12 @@ import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
 export const processStudioImage = task({
   id: "process-studio-image",
   maxDuration: 180,
+  retry: {
+    maxAttempts: 4,
+    minTimeoutInMs: 2000,
+    maxTimeoutInMs: 10_000,
+    factor: 2,
+  },
 
   run: async (payload: {
     /** If set, persist result to Supabase Storage + update the DB row */
@@ -34,23 +40,35 @@ export const processStudioImage = task({
 
     const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
-    const replicateOutput = await replicate.run(getReplicateModel(), {
-      input: {
-        prompt,
-        input_images:     [imageBase64],   // array, not image_prompt
-        aspect_ratio:     "match_input_image",
-        output_format:    "jpg",
-        output_quality:   90,
-        safety_tolerance: 2,
-      },
-    });
+    let replicateOutput: unknown;
+    try {
+      replicateOutput = await replicate.run(getReplicateModel(), {
+        input: {
+          prompt,
+          input_images:     [imageBase64],
+          aspect_ratio:     "match_input_image",
+          output_format:    "jpg",
+          output_quality:   90,
+          safety_tolerance: 2,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("429") || message.toLowerCase().includes("rate limit") || message.toLowerCase().includes("throttled")) {
+        logger.warn("Replicate rate limited — will retry", { message });
+      } else {
+        logger.error("Replicate call failed", { message });
+      }
+      // Throw so Trigger.dev retry config kicks in
+      throw err;
+    }
 
-    // Model output schema: { type: "string", format: "uri" } — a single URL
-    const rawOutput = replicateOutput as unknown;
-    const outputUrl = typeof rawOutput === "string" ? rawOutput : null;
+    // flux-2-pro: single string URI. Handle array output too for robustness.
+    const rawUrl = Array.isArray(replicateOutput) ? replicateOutput[0] : replicateOutput;
+    const outputUrl = typeof rawUrl === "string" ? rawUrl : null;
 
     if (!outputUrl) {
-      logger.error("No output from Replicate", { rawOutput });
+      logger.error("No output from Replicate", { replicateOutput });
       return { success: false as const, error: "No output returned from Replicate" };
     }
 
