@@ -46,12 +46,15 @@ export default function Navbar({
 
       {/* Profile Button */}
       <div className="flex-shrink-0">
-        <Button
-          variant="outline"
-          onClick={onProfileClick}
-        >
-          {profileButtonLabel}
-        </Button>
+        {onProfileClick ? (
+          <Button variant="outline" onClick={onProfileClick}>
+            {profileButtonLabel}
+          </Button>
+        ) : (
+          <Button variant="outline" asChild>
+            <Link href="/profile">{profileButtonLabel}</Link>
+          </Button>
+        )}
       </div>
     </nav>
   )
