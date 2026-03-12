@@ -1,250 +1,114 @@
-# Hackathon Starter Template
+# CodeHunt - AI-Powered Real Estate Intelligence
 
-A production-ready Next.js starter that lets you ship an AI-powered app in a single hackathon session.
+CodeHunt is a next-generation real estate platform built with Next.js 15, Supabase, and Trigger.dev. It leverages advanced AI (Google Gemini 2.5 Flash & Groq Llama 3.3 70B) to provide automated property valuations, investment insights, offer risk assessments, and interactive AI agents for real estate discovery.
 
-## Stack
+## 🚀 Core Features
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router, TypeScript) |
-| Styling | Tailwind CSS v4 + shadcn/ui |
-| Auth + Database | Supabase |
-| Background Tasks | Trigger.dev v3 |
-| AI | Vercel AI SDK + Google Gemini 2.5 Flash |
-| Validation | Zod (single schema source of truth) |
-| Real-time UI | Supabase Realtime + Trigger.dev React Hooks |
+### 🤖 AI-Powered Intelligence
+- **Automated Property Valuation**: Background AI tasks analyze property details, location, and market trends to generate accurate price estimates and confidence scores.
+- **Investment Advisory**: Personalized investment insights based on user preferences (risk tolerance, budget, preferred property types).
+- **Offer Risk Assessment**: AI evaluates incoming offers, scoring them on financial viability, buyer credibility, and market conditions.
+- **Neighbourhood Intelligence**: Automatically generates context about a property's surroundings (distance to transit, schools, crime index, future development score).
+- **Portfolio Optimization**: Analyzes a user's saved properties and investments to suggest portfolio rebalancing and highlight potential risks/opportunities.
 
----
+### 💬 Interactive AI Agents
+- **Real Estate Assistant**: A conversational AI agent powered by Groq (Llama 3.3 70B) that can search the database for properties, analyze market statistics, and provide personalized recommendations using MCP-style tool calling.
+- **Context-Aware Chat**: The agent remembers conversation history and can perform complex queries like "Find me 3BHK apartments in Bangalore under ₹1.5Cr with high rental yield."
 
-## Project Structure
+### ⚡ Real-Time Experience
+- **Live Updates**: Powered by Supabase Realtime, the UI automatically updates when background AI tasks complete (e.g., when a valuation report is ready or a new offer is received).
+- **Instant Notifications**: Toast notifications alert users to important events without requiring a page refresh.
+
+### 🏢 Property Management
+- **Comprehensive Listings**: Create detailed property listings with images, specifications, and location data.
+- **Offer Management**: Receive, review, and accept/reject offers directly through the platform.
+- **Status Tracking**: Manage property lifecycle (Draft, Active, Sold, Rented).
+
+### 🔐 Secure & Scalable
+- **Authentication**: Secure user authentication and profile management via Supabase Auth.
+- **Background Processing**: Heavy AI workloads are offloaded to Trigger.dev, ensuring the UI remains fast and responsive.
+- **Robust Database**: PostgreSQL database with Row Level Security (RLS) to protect user data.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router, React 19, Server Actions)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/), Lucide Icons
+- **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage, Realtime)
+- **Background Jobs**: [Trigger.dev v3](https://trigger.dev/)
+- **AI Integration**: [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- **AI Models**: Google Gemini 2.5 Flash (Background Tasks), Groq Llama 3.3 70B (Interactive Agents)
+- **Validation**: [Zod](https://zod.dev/)
+
+## 📂 Project Structure
 
 ```
 src/
-├── actions/
-│   ├── ai.ts              # Server Action: validate → insert DB row → trigger task → return public token
-│   └── auth/auth.ts       # Server Actions: login, signup, signOut
-├── app/
-│   ├── layout.tsx          # Root layout with Sonner <Toaster />
-│   ├── page.tsx            # Home: auth gate + AI dashboard + history
-│   └── auth/              # Login, sign-up, forgot-password, confirm, error pages
-├── components/
-│   ├── ai/
-│   │   ├── prompt-form.tsx          # Client form: useFormStatus + useRealtimeRun
-│   │   └── generations-history.tsx  # Client component: Supabase Realtime live history
-│   ├── auth/               # LoginForm, SignUpForm, ForgotPasswordForm, LogoutButton, etc.
-│   └── ui/                 # shadcn/ui primitives
-├── lib/
-│   ├── schema/index.ts     # ← All Zod schemas + DB types (single source of truth)
-│   ├── ai/config.ts        # AI model config + runBackgroundAgent()
-│   └── supabase/
-│       ├── client.ts       # Browser client (createBrowserClient)
-│       ├── server.ts       # Server client (createServerClient + cookies)
-│       ├── admin.ts        # Service-role client for Trigger.dev tasks
-│       └── proxy.ts        # Middleware session refresh (updateSession)
-└── trigger/
-    └── ai.ts               # Trigger.dev task: calls AI, writes result to DB
+├── actions/        # Next.js Server Actions (Auth, Property, AI, Profile)
+├── app/            # Next.js App Router Pages & Layouts
+├── components/     # React Components (UI, Forms, Realtime Listeners)
+├── lib/            # Utilities, Database Schemas, AI Tool Definitions
+├── trigger/        # Trigger.dev Background Tasks & Cron Jobs
+└── triggers/       # Trigger.dev Configuration
+supabase/
+└── migrations/     # Database Schema Migrations
 ```
 
----
+## 🚀 Getting Started
 
-## Getting Started
+### Prerequisites
+- Node.js 18+
+- pnpm
+- Supabase account
+- Trigger.dev account
+- API keys for Google Gemini and Groq
 
-### 1. Clone & install
+### Installation
 
-```bash
-git clone <your-repo>
-cd hackathon-template
-pnpm install
-```
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd codehunt
+   ```
 
-### 2. Environment variables
+2. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
 
-Create a `.env.local` file in the root:
+3. **Environment Variables:**
+   Create a `.env.local` file in the root directory and add the following variables:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   
+   TRIGGER_SECRET_KEY=your_trigger_secret_key
+   
+   GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+   GROQ_API_KEY=your_groq_api_key
+   ```
 
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon-public-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>   # Never expose to browser
+4. **Database Setup:**
+   Apply the Supabase migrations to set up the database schema:
+   ```bash
+   supabase link --project-ref your_project_ref
+   supabase db push
+   ```
 
-# Google AI (Gemini)
-GOOGLE_GENERATIVE_AI_API_KEY=<your-gemini-api-key>
+5. **Run the Development Server:**
+   ```bash
+   pnpm dev
+   ```
 
-# Trigger.dev
-TRIGGER_SECRET_KEY=<your-trigger-secret-key>
-```
-
-> Get `SUPABASE_SERVICE_ROLE_KEY` from **Supabase Dashboard → Project Settings → API → service_role**.  
-> Get `TRIGGER_SECRET_KEY` from **Trigger.dev Dashboard → Project → API Keys**.
-
-### 3. Set up the database
-
-Run this SQL in **Supabase Dashboard → SQL Editor**:
-
-```sql
-CREATE TABLE generations (
-  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id     UUID        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  prompt      TEXT        NOT NULL,
-  result      TEXT,
-  status      TEXT        DEFAULT 'pending',
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE generations ENABLE ROW LEVEL SECURITY;
-
--- Users can only read their own rows
-CREATE POLICY "users_read_own" ON generations
-  FOR SELECT USING (auth.uid() = user_id);
-```
-
-Then enable **Realtime** for the table:  
-**Supabase Dashboard → Database → Replication → supabase_realtime → Add table → generations**.
-
-### 4. Run locally
-
-```bash
-pnpm dev
-```
-
-This starts Next.js on `http://localhost:3000` **and** the Trigger.dev dev worker in parallel (see `package.json` scripts).
-
----
-
-## How It Works
-
-```
-User submits prompt
-       │
-       ▼
-Server Action (actions/ai.ts)
-  1. Zod validates the input          ← schema from src/lib/schema/index.ts
-  2. Auth guarded (Supabase session)
-  3. INSERT pending row → generations table
-  4. tasks.trigger("generate-ai-response", { prompt, userId, generationId })
-  5. auth.createPublicToken(runId)    ← scoped read-only token
-  6. Returns { runId, publicToken }
-       │
-       ▼
-Trigger.dev Task (trigger/ai.ts)
-  1. Calls runBackgroundAgent(prompt) ← lib/ai/config.ts → Gemini 2.5 Flash
-  2. UPDATE generations SET result, status='completed'
-       │
-       ├─► useRealtimeRun(runId)      ← streams live task status to PromptForm
-       └─► Supabase Realtime          ← streams DB row update to GenerationsHistory
-```
-
----
-
-## Key Files
-
-### `src/lib/schema/`
-Single source of truth for all Zod schemas and shared TypeScript types, split by domain:
-
-| File | Contents |
-|---|---|
-| `ai.schema.ts` | `promptSchema`, `PromptInput`, `Generation` type |
-| `auth.schema.ts` | `loginSchema`, `signUpSchema`, `forgotPasswordSchema`, `updatePasswordSchema` + their input types |
-| `index.ts` | Barrel re-export — import from either the barrel or directly from the file |
-
-```ts
-// Via barrel (convenient)
-import { promptSchema, loginSchema, type Generation } from "@/lib/schema";
-
-// Direct import (explicit)
-import { promptSchema, type Generation } from "@/lib/schema/ai.schema";
-import { loginSchema, signUpSchema } from "@/lib/schema/auth.schema";
-```
-
-### `src/lib/supabase/admin.ts`
-Service-role Supabase client. Use **only** in Trigger.dev tasks or other server-only code. Never import this in a Client Component.
-
-### `src/components/ai/prompt-form.tsx`
-- `useFormStatus` — disables the submit button while the Server Action is in-flight
-- `useRealtimeRun` — streams live task status (PENDING → EXECUTING → COMPLETED) directly into the UI
-
-### `src/components/ai/generations-history.tsx`
-Subscribes to `postgres_changes` on the `generations` table, filtered to the current user. The history list updates live when Trigger.dev writes the AI result back to the database.
-
----
-
-## Swap the AI Model
-
-Edit `src/lib/ai/config.ts`:
-
-```ts
-import { openai } from "@ai-sdk/openai";   // pnpm add @ai-sdk/openai
-
-export const aiModels = {
-  primary: openai("gpt-4o-mini"),
-};
-```
-
----
-
-## Auth Flow
-
-Supabase handles the full auth lifecycle:
-
-| Route | Purpose |
-|---|---|
-| `/auth/login` | Email + password sign-in |
-| `/auth/sign-up` | Registration with email confirmation |
-| `/auth/forget-password` | Send reset email |
-| `/auth/update-password` | Set new password (post-reset) |
-| `/auth/confirm` | Handles PKCE code exchange + magic link OTP |
-| `/auth/error` | Displays auth errors |
-
-Session refresh is handled automatically in middleware via `updateSession()` in `src/lib/supabase/proxy.ts`.
-
----
-
-## Deployment
-
-```bash
-pnpm build
-```
-
-Deploy to **Vercel** — it will detect the Next.js project automatically. Add all environment variables in **Vercel Dashboard → Settings → Environment Variables**.
-
-For Trigger.dev, deploy your tasks:
-
-```bash
-npx trigger.dev@latest deploy
-```
-
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+6. **Run Trigger.dev (in a separate terminal):**
+   ```bash
+   pnpm dlx trigger.dev@latest dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📝 License
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project is licensed under the MIT License.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
