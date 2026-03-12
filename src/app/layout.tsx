@@ -35,9 +35,11 @@ export default function RootLayout({
           companyName="CodeHunt"
           links={[
             { label: 'Home', href: '/' },
-            { label: 'Features', href: '/features' },
-            { label: 'Pricing', href: '/pricing' },
-            { label: 'Contact', href: '/contact' },
+            { label: 'For Buyers', href: '/buyers' },
+            { label: 'For Tenants', href: '/tenants' },
+            { label: 'For Owners', href: '/owners' },
+            { label: 'For Dealers/Builderws', href: '/dealers' },
+
           ]}
           profileButtonLabel="Profile"
         />

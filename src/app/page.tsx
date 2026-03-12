@@ -7,6 +7,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { GenerationsHistory } from "@/components/ai/generations-history";
 import type { Generation } from "@/lib/schema";
 import { PropertySearch } from "@/components/property-search";
+import { NewlyLaunched } from "@/components/newly-launched";
 
 
 export default async function HomePage() {
@@ -24,6 +25,7 @@ export default async function HomePage() {
           </Button>
         </div>
         <PropertySearch />
+        <NewlyLaunched />
       </div>
     );
   }
@@ -36,9 +38,11 @@ export default async function HomePage() {
     .limit(10);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 gap-8">
+    <div className="flex mt-10 flex-col items-center justify-center p-4 gap-8">
       {/* Property Search Bar */}
       <PropertySearch />
+      {/* Newly Launched Projects */}
+      <NewlyLaunched />
 
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
