@@ -6,10 +6,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, TrendingUp, ShieldCheck, BarChart3,
-  Wand2, Sparkles, MapPin, FileText,
+  Wand2, Sparkles, MapPin, FileText, Image as ImageIcon,
+  MessageSquare, Building2, Users
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FadeIn } from "@/components/fade-in";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -42,174 +43,210 @@ export default async function HomePage() {
     .eq("status", "active");
 
   return (
-    <div className="flex flex-col">
-      {/* ── Hero ── */}
-      <section className="relative w-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 py-20 px-4 overflow-hidden">
-        {/* decorative blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+    <div className="relative flex flex-col min-h-screen selection:bg-indigo-500/30">
+      {/* ── Fixed Background Image ── */}
+      <div 
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1723796994732-b375f31ef231?w=1600&auto=format&fit=crop&q=80')" }}
+      >
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80" />
+      </div>
 
-        <div className="relative max-w-3xl mx-auto text-center space-y-6">
-          <Badge variant="secondary" className="bg-white/10 text-white border-white/20 hover:bg-white/10 text-xs px-3 py-1">
-            🇮🇳 India&apos;s Real Estate Platform
-          </Badge>
+      <main className="flex-grow w-full pb-20 pt-16 sm:pt-24 relative z-10 flex flex-col gap-24 sm:gap-32">
+        
+        {/* ── Hero ── */}
+        <FadeIn>
+          <section className="w-full flex items-center justify-center px-4 sm:px-6 md:px-8">
+            <div className="w-full max-w-6xl mx-auto rounded-[2.5rem] bg-white/5 backdrop-blur-xl border border-white/10 p-8 sm:p-12 md:p-16 shadow-[0_8px_30px_rgb(0,0,0,0.4)] flex flex-col justify-end min-h-[50vh] sm:min-h-[60vh] relative overflow-hidden">
+              
+              {/* Subtle gradient orb inside hero */}
+              <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" />
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
-            Find Your Perfect
-            <span className="block text-indigo-300">Property in India</span>
-          </h1>
-
-          <p className="text-slate-300 text-base max-w-xl mx-auto leading-relaxed">
-            Discover, buy, and sell properties across India with smart search,
-            verified listings, and zero brokerage.
-          </p>
-
-          <div className="flex justify-center">
-            <PropertySearch />
-          </div>
-
-          {/* Trust stats */}
-          <div className="flex items-center justify-center flex-wrap gap-6 pt-2">
-            <Stat value={String(totalCount ?? 0) + "+"} label="Active Listings" />
-            <div className="w-px h-8 bg-white/20 hidden sm:block" />
-            <Stat value="50+" label="Cities Covered" />
-            <div className="w-px h-8 bg-white/20 hidden sm:block" />
-            <Stat value="₹0" label="Brokerage" />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Category chips ── */}
-      <section className="w-full max-w-5xl mx-auto py-8 px-4">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-4">Browse by type</p>
-        <div className="flex flex-wrap gap-3">
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.value}
-              href={`/properties?type=${cat.value}`}
-              className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 shadow-sm"
-            >
-              <span className="text-lg">{cat.emoji}</span>
-              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                {cat.label}
-              </span>
-            </Link>
-          ))}
-          <Link
-            href="/properties"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all duration-200"
-          >
-            View All <ArrowRight size={13} />
-          </Link>
-        </div>
-      </section>
-
-      {/* ── Newly Launched ── */}
-      <section className="w-full max-w-5xl mx-auto py-2 px-4">
-        <NewlyLaunched properties={(recentProperties ?? []) as Property[]} />
-      </section>
-
-      {/* ── Why Estator ── */}
-      <section className="w-full max-w-5xl mx-auto py-10 px-4">
-        <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950/40 border border-border p-8">
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-2">Why Estator</p>
-          <h2 className="text-2xl font-bold text-foreground mb-8">
-            The smarter way to find property
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Feature
-              icon={<TrendingUp size={20} className="text-indigo-500" />}
-              bg="bg-indigo-100 dark:bg-indigo-900/40"
-              title="Smart Valuations"
-              description="Get accurate price estimates based on thousands of real listings and local market data."
-            />
-            <Feature
-              icon={<ShieldCheck size={20} className="text-emerald-500" />}
-              bg="bg-emerald-100 dark:bg-emerald-900/40"
-              title="Verified Listings"
-              description="Every listing is reviewed for authenticity. Buy and sell with complete confidence."
-            />
-            <Feature
-              icon={<BarChart3 size={20} className="text-blue-500" />}
-              bg="bg-blue-100 dark:bg-blue-900/40"
-              title="Market Insights"
-              description="Real-time price trends and demand signals for every city and neighbourhood."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── AI Features ── */}
-      <section className="w-full max-w-5xl mx-auto py-10 px-4">
-        <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-white/10 p-8 overflow-hidden relative">
-          {/* decorative blobs */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Sparkles size={12} className="text-white" />
+              <div className="max-w-4xl mb-12 relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white text-xs font-semibold uppercase tracking-wider mb-6">
+                  <Sparkles size={14} className="text-indigo-400" />
+                  AI-Powered Real Estate
+                </div>
+                <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight leading-[1.05] text-white mb-6">
+                  Real Estate <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-400">Intelligence.</span>
+                </h1>
+                <p className="text-white/70 text-lg sm:text-xl font-medium tracking-wide max-w-2xl mb-8">
+                  Discover, analyze and invest in properties using AI insights. Experience the future of property hunting.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
+                  <Link href="/properties">
+                    <button className="bg-white text-black px-8 py-3.5 rounded-full hover:bg-slate-200 transition-colors">
+                      Explore Properties
+                    </button>
+                  </Link>
+                  <Link href="/properties">
+                    <button className="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md">
+                      Get AI Valuation
+                    </button>
+                  </Link>
+                </div>
               </div>
-              <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest">
-                Powered by AI
-              </p>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-8">
-              Smart tools built into every listing
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <AIFeature
-                icon={<Wand2 size={18} className="text-violet-300" />}
-                bg="bg-violet-500/20"
-                title="AI Image Studio"
-                description="Stage rooms, swap furniture, enhance photos or compare before/after — all from your browser."
-                tag="Photo Tools"
-                tagColor="text-violet-400 bg-violet-500/20"
-              />
-              <AIFeature
-                icon={<TrendingUp size={18} className="text-indigo-300" />}
-                bg="bg-indigo-500/20"
-                title="Smart Valuation"
-                description="Instant AI price estimate with confidence score, comparable analysis, and key market factors."
-                tag="Pricing"
-                tagColor="text-indigo-400 bg-indigo-500/20"
-              />
-              <AIFeature
-                icon={<MapPin size={18} className="text-blue-300" />}
-                bg="bg-blue-500/20"
-                title="Neighbourhood Intel"
-                description="Safety index, school distance, metro access, rental yield, and 5-year growth forecast."
-                tag="Location"
-                tagColor="text-blue-400 bg-blue-500/20"
-              />
-              <AIFeature
-                icon={<FileText size={18} className="text-teal-300" />}
-                bg="bg-teal-500/20"
-                title="Auto Description"
-                description="One click to generate an optimised, buyer-ready listing description tailored to your property type."
-                tag="Listing"
-                tagColor="text-teal-400 bg-teal-500/20"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ── CTA ── */}
-      <section className="w-full max-w-5xl mx-auto py-4 px-4 pb-16">
-        <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="text-center sm:text-left">
-            <h3 className="text-xl font-bold text-white">Ready to list your property?</h3>
-            <p className="text-indigo-200 text-sm mt-1">Reach thousands of verified buyers. Zero brokerage, always.</p>
-          </div>
-          <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shrink-0">
-            <Link href="/properties/new">
-              List Your Property <ArrowRight size={16} className="ml-2" />
-            </Link>
-          </Button>
-        </div>
-      </section>
+              <div className="w-full relative z-10">
+                <PropertySearch />
+              </div>
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── Category Chips ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+            <p className="text-sm font-bold text-white/50 uppercase tracking-widest mb-6 px-2">Browse by type</p>
+            <div className="flex flex-wrap gap-4">
+              {CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.value}
+                  href={`/properties?type=${cat.value}`}
+                  className="group flex items-center gap-2.5 px-6 py-3.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-indigo-500/50 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-300 backdrop-blur-md cursor-pointer"
+                >
+                  <span className="text-xl group-hover:scale-110 transition-transform duration-300">{cat.emoji}</span>
+                  <span className="text-sm font-semibold text-white/90 group-hover:text-white transition-colors tracking-wide">
+                    {cat.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── Newly Launched ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+            <NewlyLaunched properties={(recentProperties ?? []) as Property[]} />
+          </section>
+        </FadeIn>
+
+        {/* ── Why FuturEstate AI ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-4">Why FuturEstate AI</h2>
+              <p className="text-white/60 text-lg max-w-2xl mx-auto">The smartest way to navigate the real estate market with predictive algorithms and verified data.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Feature
+                icon={<TrendingUp size={24} className="text-indigo-400" />}
+                title="Smart Valuations"
+                description="Get accurate price estimates based on thousands of real listings and local market data."
+              />
+              <Feature
+                icon={<ShieldCheck size={24} className="text-emerald-400" />}
+                title="Verified Listings"
+                description="Every listing is reviewed for authenticity. Buy and sell with complete confidence."
+              />
+              <Feature
+                icon={<BarChart3 size={24} className="text-blue-400" />}
+                title="Market Insights"
+                description="Real-time price trends and demand signals for every city and neighbourhood."
+              />
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── AI Features ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="rounded-[2.5rem] bg-gradient-to-br from-indigo-950/40 via-slate-900/50 to-purple-900/20 border border-white/10 p-8 sm:p-12 backdrop-blur-xl relative overflow-hidden">
+              <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] pointer-events-none" />
+              <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none" />
+
+              <div className="relative z-10 mb-12 text-center md:text-left">
+                <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-4">Smart tools built into every listing</h2>
+                <p className="text-white/60 text-lg max-w-2xl">Leverage generative AI to explore and list properties effortlessly.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+                <AIFeature
+                  icon={<ImageIcon size={20} className="text-violet-400" />}
+                  title="AI Image Studio"
+                  description="Stage rooms, swap furniture, enhance photos or compare before/after — all from your browser."
+                />
+                <AIFeature
+                  icon={<Wand2 size={20} className="text-indigo-400" />}
+                  title="Smart Valuation"
+                  description="Instant AI price estimate with confidence score, comparable analysis, and key market factors."
+                />
+                <AIFeature
+                  icon={<MapPin size={20} className="text-blue-400" />}
+                  title="Neighbourhood Intel"
+                  description="Safety index, school distance, metro access, rental yield, and 5-year growth forecast."
+                />
+                <AIFeature
+                  icon={<FileText size={20} className="text-teal-400" />}
+                  title="Auto Description"
+                  description="One click to generate an optimised, buyer-ready listing description tailored to your property."
+                />
+              </div>
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── Stats ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-12">
+              <Stat value={String(totalCount ?? 0) + "+"} label="Properties analyzed" />
+              <Stat value="14,200+" label="AI valuations generated" />
+              <Stat value="50+" label="Cities covered" />
+              <Stat value="8,500+" label="Active investors" />
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── AI Assistant ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 text-center">
+            <div className="flex flex-col items-center justify-center p-8 sm:p-12 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-xl">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(99,102,241,0.5)]">
+                <MessageSquare size={28} className="text-white" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-6">Talk to Your AI Real Estate Advisor</h2>
+              <div className="bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-6 mb-8 max-w-lg w-full text-left inline-block relative">
+                <div className="absolute top-1/2 -left-3 -translate-y-1/2 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-black/40 border-b-[8px] border-b-transparent hidden sm:block"></div>
+                <p className="text-white/80 font-mono text-sm sm:text-base">
+                  &quot;Find me a 3BHK under ₹1.5Cr in Bangalore with a high rental yield and upcoming metro connectivity.&quot;
+                </p>
+              </div>
+              <Link href="/agents">
+                <button className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 px-8 rounded-full transition-all shadow-lg hover:shadow-indigo-500/25">
+                  Try AI Assistant
+                </button>
+              </Link>
+            </div>
+          </section>
+        </FadeIn>
+
+        {/* ── CTA ── */}
+        <FadeIn delay={0.1}>
+          <section className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="rounded-[2.5rem] bg-gradient-to-r from-indigo-600 to-purple-600 p-10 sm:p-16 flex flex-col items-center justify-center text-center shadow-[0_10px_40px_rgba(79,70,229,0.3)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+                <Building2 size={200} />
+              </div>
+              <h3 className="text-4xl sm:text-5xl font-bold text-white mb-6 relative z-10 tracking-tight">
+                Find Your Next Property Investment With AI
+              </h3>
+              <p className="text-indigo-100 text-lg mb-10 relative z-10 max-w-2xl">
+                Join thousands of modern buyers bypassing the noise and using data to make smarter real estate decisions.
+              </p>
+              <Link href="/properties" className="relative z-10">
+                <button className="bg-white text-indigo-900 border-0 hover:bg-slate-100 hover:scale-105 font-bold px-10 py-4 rounded-full transition-all shadow-xl">
+                  Explore Properties
+                </button>
+              </Link>
+            </div>
+          </section>
+        </FadeIn>
+
+      </main>
     </div>
   );
 }
@@ -226,57 +263,48 @@ const CATEGORIES = [
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="text-center">
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+    <div className="text-center flex flex-col items-center justify-center">
+      <p className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-2 drop-shadow-md">{value}</p>
+      <p className="text-sm text-white/60 uppercase tracking-widest font-semibold">{label}</p>
     </div>
   );
 }
 
 function Feature({
-  icon, bg, title, description,
+  icon, title, description,
 }: {
   icon: React.ReactNode;
-  bg: string;
   title: string;
   description: string;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
+    <div className="flex flex-col gap-4 bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/10 hover:bg-white/10 transition-colors group hover:-translate-y-1 duration-300">
+      <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{description}</p>
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-base text-white/60 leading-relaxed">{description}</p>
       </div>
     </div>
   );
 }
 
 function AIFeature({
-  icon, bg, title, description, tag, tagColor,
+  icon, title, description
 }: {
   icon: React.ReactNode;
-  bg: string;
   title: string;
   description: string;
-  tag: string;
-  tagColor: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 bg-white/5 hover:bg-white/[0.08] transition-colors rounded-xl p-4 border border-white/10">
-      <div className="flex items-center justify-between">
-        <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-          {icon}
-        </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tagColor}`}>
-          {tag}
-        </span>
+    <div className="flex flex-col gap-4 bg-black/20 hover:bg-black/40 backdrop-blur-md transition-colors rounded-[1.5rem] p-6 border border-white/10">
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
+        {icon}
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{description}</p>
+        <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+        <p className="text-sm text-white/50 leading-relaxed">{description}</p>
       </div>
     </div>
   );

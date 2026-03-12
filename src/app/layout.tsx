@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Estator — Find Your Perfect Property in India",
+  title: "FuturEstate AI — Find Your Perfect Property in India",
   description: "Discover, buy, and sell properties across India with smart search, AI-powered market insights, and verified listings.",
 };
 
@@ -45,7 +45,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Navbar
-            companyName="Estator"
+            companyName="FuturEstate AI"
             links={[
               { label: 'Home', href: '/' },
               { label: 'Dashboard', href: '/dashboard' },
@@ -55,7 +55,7 @@ export default async function RootLayout({
             userEmail={userEmail}
             isLoggedIn={!!user}
           />
-          <main className="pt-30  bg-background min-h-screen">
+          <main className="pt-30 min-h-screen">
             {children}
           </main>
           <Toaster richColors position="top-right" />
