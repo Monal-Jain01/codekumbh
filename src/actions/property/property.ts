@@ -10,6 +10,7 @@ import {
   type PropertyImage,
 } from "@/lib/schema/property.schema";
 import { uploadFile, deleteFile, getPublicUrl } from "@/lib/supabase/storage";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { generatePropertyValuation } from "@/trigger/property-valuation";
 import type { enrichPropertyContext } from "@/trigger/property-context";
 import type { generateInvestmentInsights } from "@/trigger/investment-insights";
@@ -467,7 +468,7 @@ export async function uploadPropertyImages(
     const storagePath = `${propertyId}/${Date.now()}_${i}.${ext}`;
 
     try {
-      const { publicUrl } = await uploadFile(supabase, file, {
+      const { publicUrl } = await uploadFile(supabaseAdmin, file, {
         bucket: "property-images",
         path: storagePath,
         upsert: true,
@@ -527,7 +528,7 @@ export async function deletePropertyImage(
 
   // Delete from storage
   try {
-    await deleteFile(supabase, "property-images", image.storage_path);
+    await deleteFile(supabaseAdmin, "property-images", image.storage_path);
   } catch {
     // Non-fatal — file may already be gone
   }

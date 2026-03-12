@@ -19,9 +19,14 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
+      bodySizeLimit: '10mb',
       allowedOrigins: [
         "localhost:3000",
-        "congenial-telegram-v5wxp6xpx9gh645-3000.app.github.dev",
+        "localhost:3001",
+        // GitHub Codespaces (any subdomain)
+        "*.app.github.dev",
+        // Vercel previews
+        "*.vercel.app",
       ],
     },
   },

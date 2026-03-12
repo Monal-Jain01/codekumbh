@@ -13,6 +13,7 @@ import {
   deleteFile,
   extractStoragePath,
 } from "@/lib/supabase/storage";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 // ---------------------------------------------------------------------------
 // Internal helper: resolve the authenticated user or return an error
@@ -216,7 +217,7 @@ export async function uploadAvatar(
     if (existing?.avatar_url) {
       try {
         const oldPath = extractStoragePath(existing.avatar_url, "avatars");
-        await deleteFile(supabase, "avatars", oldPath);
+        await deleteFile(supabaseAdmin, "avatars", oldPath);
       } catch {
         // Non-fatal: old file may have already been deleted or belong to a
         // different bucket. Continue with the upload.
@@ -227,7 +228,7 @@ export async function uploadAvatar(
     const ext = file.name.split(".").pop() ?? "jpg";
     const storagePath = `${userId}/avatar_${Date.now()}.${ext}`;
 
-    const { publicUrl } = await uploadFile(supabase, file, {
+    const { publicUrl } = await uploadFile(supabaseAdmin, file, {
       bucket: "avatars",
       path: storagePath,
       upsert: true,
@@ -271,7 +272,7 @@ export async function deleteAvatar(): Promise<
   if (existing?.avatar_url) {
     try {
       const path = extractStoragePath(existing.avatar_url, "avatars");
-      await deleteFile(supabase, "avatars", path);
+      await deleteFile(supabaseAdmin, "avatars", path);
     } catch {
       // Non-fatal — clear the DB record regardless
     }
