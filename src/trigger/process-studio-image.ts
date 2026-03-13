@@ -3,22 +3,78 @@ import Replicate from "replicate";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
 
-/* ── Task ───────────────────────────────────────────────────────────────── */
+/* ── Provider helpers ────────────────────────────────────────────────────── */
+
+/** Replicate: flux-2-pro image-to-image. Returns raw bytes. */
+async function callReplicate(prompt: string, imageBase64: string): Promise<Buffer> {
+  if (!process.env.REPLICATE_API_TOKEN) throw new Error("REPLICATE_API_TOKEN not set");
+
+  const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+  const output = await replicate.run(getReplicateModel(), {
+    input: {
+      prompt,
+      input_images:     [imageBase64],
+      aspect_ratio:     "match_input_image",
+      output_format:    "jpg",
+      output_quality:   90,
+      safety_tolerance: 2,
+    },
+  });
+
+  const rawUrl = Array.isArray(output as unknown) ? (output as unknown[])[0] : output;
+  if (typeof rawUrl !== "string") throw new Error("Replicate returned no URL");
+
+  const res = await fetch(rawUrl);
+  if (!res.ok) throw new Error(`Replicate download failed: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/** fal.ai: flux-pro/kontext/max image editing via direct REST API. Returns raw bytes. */
+async function callFal(prompt: string, imageBase64: string): Promise<Buffer> {
+  const apiKey = process.env.FAL_API_KEY || process.env.FAL_KEY;
+  if (!apiKey) throw new Error("FAL_API_KEY not set");
+
+  const res = await fetch("https://fal.run/fal-ai/flux-pro/kontext/max", {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      image_url: imageBase64,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`fal.ai ${res.status}: ${body}`);
+  }
+
+  const json = await res.json();
+  const url = json.images?.[0]?.url;
+  if (typeof url !== "string") throw new Error("fal.ai returned no image URL");
+
+  const imgRes = await fetch(url);
+  if (!imgRes.ok) throw new Error(`fal.ai download failed: ${imgRes.status}`);
+  return Buffer.from(await imgRes.arrayBuffer());
+}
+
+function isRateLimit(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes("429") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("throttled");
+}
+
+/* ── Task ────────────────────────────────────────────────────────────────── */
 
 export const processStudioImage = task({
   id: "process-studio-image",
   maxDuration: 180,
-  retry: {
-    maxAttempts: 4,
-    minTimeoutInMs: 2000,
-    maxTimeoutInMs: 10_000,
-    factor: 2,
-  },
+  // Only retry if ALL providers fail
+  retry: { maxAttempts: 2, minTimeoutInMs: 3000, maxTimeoutInMs: 10_000 },
 
   run: async (payload: {
-    /** If set, persist result to Supabase Storage + update the DB row */
     propertyImageId?: string;
-    /** Base64 encoded image: "data:image/jpeg;base64,..." */
     imageBase64: string;
     tool: string;
     preset?: string;
@@ -26,102 +82,67 @@ export const processStudioImage = task({
     replaceText?: string;
   }) => {
     const { propertyImageId, imageBase64, tool, preset, removeText, replaceText } = payload;
-    logger.log("Starting AI Studio image processing", { propertyImageId, tool, preset });
+    logger.log("Starting AI Studio processing", { propertyImageId, tool, preset });
 
-    // ── 1. Validate API token ──────────────────────────────────────────
-    if (!process.env.REPLICATE_API_TOKEN) {
-      logger.error("REPLICATE_API_TOKEN not set");
-      return { success: false as const, error: "REPLICATE_API_TOKEN not configured" };
-    }
-
-    // ── 2. Call Replicate API via SDK ──────────────────────────────────
     const { prompt } = buildStudioPrompt(tool, { preset, removeText, replaceText });
-    logger.log("Sending to Replicate", { model: getReplicateModel(), prompt: prompt.slice(0, 80) });
 
-    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+    // ── 1. Run image through AI (Replicate → fal.ai fallback) ────────────
+    let processedBytes: Buffer;
+    let provider = "replicate";
 
-    let replicateOutput: unknown;
     try {
-      replicateOutput = await replicate.run(getReplicateModel(), {
-        input: {
-          prompt,
-          input_images:     [imageBase64],
-          aspect_ratio:     "match_input_image",
-          output_format:    "jpg",
-          output_quality:   90,
-          safety_tolerance: 2,
-        },
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("429") || message.toLowerCase().includes("rate limit") || message.toLowerCase().includes("throttled")) {
-        logger.warn("Replicate rate limited — will retry", { message });
+      logger.log("Trying Replicate…", { prompt: prompt.slice(0, 60) });
+      processedBytes = await callReplicate(prompt, imageBase64);
+      logger.log("Replicate success");
+    } catch (replicateErr) {
+      const msg = replicateErr instanceof Error ? replicateErr.message : String(replicateErr);
+      if (isRateLimit(replicateErr)) {
+        logger.warn("Replicate rate-limited — falling back to fal.ai");
       } else {
-        logger.error("Replicate call failed", { message });
+        logger.warn("Replicate failed — falling back to fal.ai", { error: msg });
       }
-      // Throw so Trigger.dev retry config kicks in
-      throw err;
+
+      try {
+        logger.log("Trying fal.ai…", { model: "flux-pro/kontext/max" });
+        processedBytes = await callFal(prompt, imageBase64);
+        provider = "fal";
+        logger.log("fal.ai success");
+      } catch (falErr) {
+        const falMsg = falErr instanceof Error ? falErr.message : String(falErr);
+        logger.error("All providers failed", { replicateErr: msg, falErr: falMsg });
+        // Throw → Trigger.dev retry kicks in
+        throw new Error(`All AI providers failed. Replicate: ${msg}. Fal: ${falMsg}`);
+      }
     }
 
-    // flux-2-pro: single string URI. Handle array output too for robustness.
-    const rawUrl = Array.isArray(replicateOutput) ? replicateOutput[0] : replicateOutput;
-    const outputUrl = typeof rawUrl === "string" ? rawUrl : null;
+    logger.log("Image generated", { provider, bytes: processedBytes.length });
 
-    if (!outputUrl) {
-      logger.error("No output from Replicate", { replicateOutput });
-      return { success: false as const, error: "No output returned from Replicate" };
-    }
-
-    logger.log("Replicate success", { outputUrl: outputUrl.slice(0, 80) });
-
-    // ── 3. Download processed image ─────────────────────────────────────
-    const imgRes = await fetch(outputUrl);
-    if (!imgRes.ok) {
-      logger.error("Failed to download Replicate output", { status: imgRes.status });
-      return { success: false as const, error: `Failed to download result: ${imgRes.status}` };
-    }
-
-    const processedBytes = Buffer.from(await imgRes.arrayBuffer());
-
-    // ── 4. If no DB row, return base64 directly (preview-only mode) ────
+    // ── 2. Preview-only mode (no DB row) ─────────────────────────────────
     if (!propertyImageId) {
       const b64 = processedBytes.toString("base64");
-      logger.log("Preview-only mode — returning base64");
-      return { success: true as const, outputBase64: `data:image/png;base64,${b64}`, tool, preset };
+      return { success: true as const, outputBase64: `data:image/jpeg;base64,${b64}`, tool, preset, provider };
     }
 
-    // ── 5. Upload to Supabase Storage ──────────────────────────────────
-    logger.log("Uploading to Supabase Storage");
-    const storagePath = `studio/${propertyImageId}-${Date.now()}.png`;
-
+    // ── 3. Upload to Supabase Storage ─────────────────────────────────────
+    const storagePath = `studio/${propertyImageId}-${Date.now()}.jpg`;
     const { error: uploadError } = await supabaseAdmin.storage
       .from("property-images")
-      .upload(storagePath, processedBytes, {
-        contentType:  "image/png",
-        cacheControl: "3600",
-        upsert:       true,
-      });
+      .upload(storagePath, processedBytes, { contentType: "image/jpeg", upsert: true });
 
     if (uploadError) {
       logger.error("Storage upload failed", { error: uploadError.message });
       return { success: false as const, error: uploadError.message };
     }
 
-    const { data: urlData } = supabaseAdmin.storage
-      .from("property-images")
-      .getPublicUrl(storagePath);
+    const { data: urlData } = supabaseAdmin.storage.from("property-images").getPublicUrl(storagePath);
+    logger.log("Uploaded to Storage", { path: storagePath });
 
-    const publicUrl = urlData.publicUrl;
-    logger.log("Uploaded to Storage", { path: storagePath, url: publicUrl });
-
-    // ── 6. Update property_images row ──────────────────────────────────
-    const appliedEffect = { tool, preset: preset ?? null, removeText: removeText ?? null, replaceText: replaceText ?? null };
-
+    // ── 4. Update property_images row ─────────────────────────────────────
     const { error: updateError } = await supabaseAdmin
       .from("property_images")
       .update({
-        ai_processed_url: publicUrl,
-        ai_applied_effect: appliedEffect,
+        ai_processed_url:  urlData.publicUrl,
+        ai_applied_effect: { tool, preset: preset ?? null, removeText: removeText ?? null, replaceText: replaceText ?? null },
       })
       .eq("id", propertyImageId);
 
@@ -130,15 +151,15 @@ export const processStudioImage = task({
       return { success: false as const, error: updateError.message };
     }
 
-    // Return base64 for instant client preview + public URL for persistence
     const b64 = processedBytes.toString("base64");
-    logger.log("Studio image processing complete", { propertyImageId, publicUrl });
+    logger.log("Studio processing complete", { propertyImageId, provider, publicUrl: urlData.publicUrl });
     return {
-      success: true as const,
-      outputBase64: `data:image/png;base64,${b64}`,
-      ai_processed_url: publicUrl,
+      success:          true as const,
+      outputBase64:     `data:image/jpeg;base64,${b64}`,
+      ai_processed_url: urlData.publicUrl,
       tool,
       preset,
+      provider,
     };
   },
 });

@@ -9,7 +9,7 @@ export default defineConfig({
   // See https://trigger.dev/docs/runs/max-duration
   maxDuration: 3600,
   retries: {
-    enabledInDev: true,
+    enabledInDev: false,
     default: {
       maxAttempts: 3,
       minTimeoutInMs: 1000,
